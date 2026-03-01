@@ -1,0 +1,78 @@
+import { Composio } from 'composio-core';
+import env from '../config/env.js';
+
+let composioClient = null;
+
+function getClient() {
+  if (!composioClient && env.COMPOSIO_API_KEY) {
+    composioClient = new Composio({ apiKey: env.COMPOSIO_API_KEY });
+  }
+  return composioClient;
+}
+
+/**
+ * Send a message to a Slack channel using Composio's managed Slack connection.
+ * Falls back to raw webhook if Composio is not configured.
+ */
+export async function sendSlackMessage({ channel, text, entityId }) {
+  const client = getClient();
+  if (!client) return null; // Composio not configured, caller should fallback
+
+  try {
+    const entity = client.getEntity(entityId || 'default');
+    const connection = await entity.getConnection({ app: 'slack' });
+
+    if (!connection) return null;
+
+    const result = await client.executeAction({
+      action: 'SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL',
+      params: {
+        channel: channel || '#general',
+        text,
+      },
+      connectedAccountId: connection.id,
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Composio Slack error:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Get the Composio auth URL for a user to connect their Slack workspace.
+ */
+export async function getSlackAuthUrl(entityId) {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    const entity = client.getEntity(entityId);
+    const connection = await entity.initiateConnection({ appName: 'slack' });
+    return connection.redirectUrl;
+  } catch (error) {
+    console.error('Composio auth URL error:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Check if a user has an active Composio Slack connection.
+ */
+export async function hasSlackConnection(entityId) {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    const entity = client.getEntity(entityId);
+    const connection = await entity.getConnection({ app: 'slack' });
+    return !!connection;
+  } catch {
+    return false;
+  }
+}
+
+export function isComposioConfigured() {
+  return !!env.COMPOSIO_API_KEY;
+}

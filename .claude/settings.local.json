@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npm run:*)",
+      "Bash(node:*)",
+      "WebFetch(domain:www.shadcn.io)",
+      "Bash(claude mcp:*)",
+      "Bash(npx shadcn@latest:*)",
+      "Bash(npx vite:*)"
+    ]
+  }
+}
