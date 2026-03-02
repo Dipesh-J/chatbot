@@ -21,6 +21,8 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick }) {
     const [attachOpen, setAttachOpen] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [attachedFiles, setAttachedFiles] = useState([]);
+    // 'report' | 'dashboard' | null — exclusive toggle
+    const [outputMode, setOutputMode] = useState(null);
     const textareaRef = useRef(null);
     const fileInputRef = useRef(null);
     const modelRef = useRef(null);
@@ -48,10 +50,12 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick }) {
     const handleSubmit = useCallback(() => {
         const trimmed = value.trim();
         if ((!trimmed && attachedFiles.length === 0) || isStreaming) return;
-        onSend(trimmed || 'Sent with attachments');
+        // Pass the user's raw text and mode separately — prompt injection happens in useChat
+        onSend(trimmed || 'Sent with attachments', outputMode);
         setValue('');
         setAttachedFiles([]);
-    }, [value, attachedFiles, isStreaming, onSend]);
+        setOutputMode(null);
+    }, [value, attachedFiles, isStreaming, onSend, outputMode]);
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -102,10 +106,6 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick }) {
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
-    const injectPrompt = (prompt) => {
-        setValue(prompt);
-        textareaRef.current?.focus();
-    };
 
     return (
         <div
@@ -173,7 +173,11 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick }) {
                                 ? 'Drop files to attach...'
                                 : isStreaming
                                     ? 'BizCopilot is thinking...'
-                                    : 'Ask about your business data...'
+                                    : outputMode === 'report'
+                                        ? 'Describe the report you want...'
+                                        : outputMode === 'dashboard'
+                                            ? 'Describe the dashboard you want...'
+                                            : 'Ask about your business data...'
                         }
                         disabled={isStreaming}
                         rows={1}
@@ -210,27 +214,45 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick }) {
                                 )}
                             </div>
 
-                            {/* Generate Report button */}
+                            {/* Generate Report toggle */}
                             <div className="relative group">
                                 <button
                                     type="button"
-                                    onClick={() => injectPrompt(REPORT_PROMPT)}
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-zinc-800 transition-all flex items-center gap-1.5"
+                                    onClick={() => setOutputMode((m) => m === 'report' ? null : 'report')}
+                                    title="Generate Report"
+                                    className={cn(
+                                        'flex items-center gap-1.5 rounded-lg transition-all px-1.5 py-1.5',
+                                        outputMode === 'report'
+                                            ? 'text-emerald-400 bg-emerald-500/15 ring-1 ring-emerald-500/40 shadow-[0_0_8px_2px_rgba(52,211,153,0.15)]'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-zinc-800'
+                                    )}
                                 >
                                     <FileText className="w-4 h-4" />
-                                    <span className="hidden group-hover:inline text-xs font-medium whitespace-nowrap">Generate Report</span>
+                                    <span className={cn(
+                                        'text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200',
+                                        outputMode === 'report' ? 'max-w-[100px] opacity-100' : 'max-w-0 opacity-0 group-hover:max-w-[100px] group-hover:opacity-100'
+                                    )}>Generate Report</span>
                                 </button>
                             </div>
 
-                            {/* Generate Dashboard button */}
+                            {/* Generate Dashboard toggle */}
                             <div className="relative group">
                                 <button
                                     type="button"
-                                    onClick={() => injectPrompt(DASHBOARD_PROMPT)}
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-zinc-800 transition-all flex items-center gap-1.5"
+                                    onClick={() => setOutputMode((m) => m === 'dashboard' ? null : 'dashboard')}
+                                    title="Generate Dashboard"
+                                    className={cn(
+                                        'flex items-center gap-1.5 rounded-lg transition-all px-1.5 py-1.5',
+                                        outputMode === 'dashboard'
+                                            ? 'text-violet-400 bg-violet-500/15 ring-1 ring-violet-500/40 shadow-[0_0_8px_2px_rgba(167,139,250,0.15)]'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-zinc-800'
+                                    )}
                                 >
                                     <BarChart2 className="w-4 h-4" />
-                                    <span className="hidden group-hover:inline text-xs font-medium whitespace-nowrap">Generate Dashboard</span>
+                                    <span className={cn(
+                                        'text-xs font-medium whitespace-nowrap overflow-hidden transition-all duration-200',
+                                        outputMode === 'dashboard' ? 'max-w-[120px] opacity-100' : 'max-w-0 opacity-0 group-hover:max-w-[120px] group-hover:opacity-100'
+                                    )}>Generate Dashboard</span>
                                 </button>
                             </div>
 

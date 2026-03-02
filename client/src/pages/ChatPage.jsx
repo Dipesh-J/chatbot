@@ -41,7 +41,7 @@ export function ChatPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleSend = (content) => sendMessage(content);
+    const handleSend = (content, outputMode) => sendMessage(content, outputMode);
     const handleSuggestion = (s) => sendMessage(s);
 
     if (!activeSession && sessions.length === 0) {

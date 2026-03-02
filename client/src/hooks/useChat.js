@@ -63,8 +63,17 @@ export function useChat() {
   );
 
   const sendMessage = useCallback(
-    async (content) => {
+    async (content, outputMode) => {
       if (!activeSession || isStreaming) return;
+
+      // The mode prompt stays hidden from the UI — only the user's raw text is displayed.
+      const MODE_PROMPTS = {
+        report: 'Generate a comprehensive business report based on the uploaded data, including key metrics, trends, and actionable insights.\n\n',
+        dashboard: 'Generate an interactive dashboard with charts and visualizations based on the uploaded data.\n\n',
+      };
+      const apiContent = outputMode && MODE_PROMPTS[outputMode]
+        ? MODE_PROMPTS[outputMode] + content
+        : content;
 
       // Optimistically add user message
       const userMsg = {
@@ -88,7 +97,7 @@ export function useChat() {
       setToolCalls([]);
 
       try {
-        const response = await sendMessageStream(activeSession._id, content);
+        const response = await sendMessageStream(activeSession._id, apiContent);
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);

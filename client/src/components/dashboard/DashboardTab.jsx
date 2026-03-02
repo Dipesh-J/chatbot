@@ -19,18 +19,6 @@ export function DashboardTab() {
 
     return (
         <div className="flex-1 flex flex-col min-h-0">
-            <div className="shrink-0 px-6 py-4 border-b border-border">
-                <div className="max-w-4xl mx-auto flex items-center gap-2">
-                    <BarChart2 className="w-5 h-5 text-primary" />
-                    <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                        Dashboard
-                    </h2>
-                    {charts.length > 0 && (
-                        <span className="ml-2 text-xs text-muted-foreground">{charts.length} chart{charts.length !== 1 ? 's' : ''}</span>
-                    )}
-                </div>
-            </div>
-
             <ScrollArea className="flex-1">
                 <div className="max-w-4xl mx-auto px-6 py-4">
                     {charts.length === 0 ? (
