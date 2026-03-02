@@ -1,3 +1,4 @@
-import api from './client.js';
+import api from './client';
 
-export const getCharts = (sessionId) => api.get(`/dashboard/sessions/${sessionId}/charts`);
+export const getSessionCharts = (sessionId) =>
+    api.get(`/dashboard/sessions/${sessionId}/charts`);

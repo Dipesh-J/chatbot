@@ -1,38 +1,49 @@
-import { useState, useCallback } from 'react';
-import { uploadCSV, getDatasets, deleteDataset } from '../api/csv';
+import { useCallback, useState } from 'react';
 import toast from 'react-hot-toast';
+import { deleteDataset, getDatasets, uploadDataset } from '../api/csv';
 
 export function useCSVUpload() {
-  const [datasets, setDatasets] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState(null);
+    const [datasets, setDatasets] = useState([]);
+    const [uploading, setUploading] = useState(false);
+    const [uploadResult, setUploadResult] = useState(null);
 
-  const loadDatasets = useCallback(async () => {
-    const res = await getDatasets();
-    setDatasets(res.data.datasets);
-  }, []);
+    const loadDatasets = useCallback(async () => {
+        try {
+            const res = await getDatasets();
+            setDatasets(res.data.datasets || []);
+        } catch {
+            toast.error('Failed to load datasets');
+        }
+    }, []);
 
-  const upload = useCallback(async (file) => {
-    setUploading(true);
-    try {
-      const res = await uploadCSV(file);
-      setUploadResult(res.data);
-      setDatasets((prev) => [res.data, ...prev]);
-      toast.success(`"${file.name}" uploaded successfully!`);
-      return res.data;
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Upload failed');
-      throw error;
-    } finally {
-      setUploading(false);
-    }
-  }, []);
+    const upload = useCallback(async (file) => {
+        setUploading(true);
+        setUploadResult(null);
+        try {
+            const res = await uploadDataset(file);
+            const dataset = res.data;
+            setDatasets((prev) => [dataset, ...prev]);
+            setUploadResult(dataset);
+            toast.success(`"${dataset.fileName}" uploaded successfully!`);
+            return dataset;
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Upload failed';
+            toast.error(msg);
+            return null;
+        } finally {
+            setUploading(false);
+        }
+    }, []);
 
-  const removeDataset = useCallback(async (id) => {
-    await deleteDataset(id);
-    setDatasets((prev) => prev.filter((d) => d._id !== id));
-    toast.success('Dataset deleted');
-  }, []);
+    const removeDataset = useCallback(async (id) => {
+        try {
+            await deleteDataset(id);
+            setDatasets((prev) => prev.filter((d) => d._id !== id));
+            toast.success('Dataset deleted');
+        } catch {
+            toast.error('Failed to delete dataset');
+        }
+    }, []);
 
-  return { datasets, uploading, uploadResult, loadDatasets, upload, removeDataset, setUploadResult };
+    return { datasets, uploading, uploadResult, setUploadResult, loadDatasets, upload, removeDataset };
 }

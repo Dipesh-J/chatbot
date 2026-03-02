@@ -2,28 +2,39 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getMe } from '../api/auth';
+import { Loader2 } from 'lucide-react';
 
-export default function AuthCallbackPage() {
-  const [params] = useSearchParams();
-  const { loginUser } = useAuth();
-  const navigate = useNavigate();
+export function AuthCallbackPage() {
+    const [searchParams] = useSearchParams();
+    const { loginUser } = useAuth();
+    const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = params.get('token');
-    if (token) {
-      localStorage.setItem('token', token);
-      getMe().then((res) => {
-        loginUser(token, res.data.user);
-        navigate('/');
-      });
-    } else {
-      navigate('/login');
-    }
-  }, []);
+    useEffect(() => {
+        const token = searchParams.get('token');
+        if (!token) {
+            navigate('/login');
+            return;
+        }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-    </div>
-  );
+        // Store token then fetch user
+        localStorage.setItem('bizcopilot_token', token);
+        getMe()
+            .then((res) => {
+                loginUser(token, res.data.user);
+                navigate('/');
+            })
+            .catch(() => {
+                localStorage.removeItem('bizcopilot_token');
+                navigate('/login');
+            });
+    }, []);
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+            <div className="text-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Signing you in...</p>
+            </div>
+        </div>
+    );
 }

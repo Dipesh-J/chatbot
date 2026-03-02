@@ -1,40 +1,28 @@
-import api from './client.js';
+import api from './client';
+
+export const getSessions = () => api.get('/chat/sessions');
 
 export const createSession = () => api.post('/chat/sessions');
-export const getSessions = () => api.get('/chat/sessions');
-export const deleteSession = (id) => api.delete(`/chat/sessions/${id}`);
-export const getMessages = (sessionId) => api.get(`/chat/sessions/${sessionId}/messages`);
 
-export const sendMessage = async (sessionId, content, onEvent) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ content }),
-  });
+export const getMessages = (sessionId) =>
+    api.get(`/chat/sessions/${sessionId}/messages`);
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+export const deleteSession = (sessionId) =>
+    api.delete(`/chat/sessions/${sessionId}`);
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          onEvent(data);
-        } catch {}
-      }
-    }
-  }
+/**
+ * Returns a native EventSource for SSE streaming.
+ * The caller is responsible for closing it.
+ */
+export const sendMessageStream = (sessionId, content) => {
+    const token = localStorage.getItem('bizcopilot_token');
+    // Use fetch with streaming for SSE (EventSource doesn't support POST)
+    return fetch(`/api/chat/sessions/${sessionId}/messages`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content }),
+    });
 };

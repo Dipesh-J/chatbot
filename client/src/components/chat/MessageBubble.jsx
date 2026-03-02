@@ -1,79 +1,111 @@
-import { useState, useCallback } from 'react';
-import { Copy, Check } from 'lucide-react';
-import { Message, MessageContent, MessageResponse, MessageAction, MessageActions } from '../ai/message';
-import { Tool, ToolHeader, ToolContent, ToolInput } from '../ai/tool';
-import { Reasoning, ReasoningTrigger, ReasoningContent } from '../ai/reasoning';
+import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { Copy, Check, User, Bot } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
 
-export default function MessageBubble({ message }) {
-  const isUser = message.role === 'user';
-  const [copied, setCopied] = useState(false);
+function CopyButton({ text }) {
+    const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [message.content]);
+    const handleCopy = async () => {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
-  if (isUser) {
     return (
-      <Message from="user" className="w-full">
-        <MessageContent className="bg-[#27272A] text-gray-100 shadow-sm border border-border px-4 py-[10px] pb-3 rounded-2xl ml-auto">
-          <div className="whitespace-pre-wrap text-[14.5px] font-normal">{message.content}</div>
-        </MessageContent>
-      </Message>
+        <button
+            onClick={handleCopy}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-zinc-700 text-muted-foreground hover:text-foreground"
+            title="Copy response"
+        >
+            {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
     );
-  }
+}
 
-  // AI messages — structure follows the reference:
-  // <Message> > <div> > [Reasoning] [Tool calls] <MessageContent> <MessageActions>
-  return (
-    <Message from="assistant" className="w-full mb-4">
-      <div>
-        {/* Reasoning block (for messages that had thinking) */}
-        {message.reasoning && (
-          <Reasoning duration={message.reasoning.duration}>
-            <ReasoningTrigger />
-            <ReasoningContent>{message.reasoning.content}</ReasoningContent>
-          </Reasoning>
-        )}
+export function MessageBubble({ message }) {
+    const isUser = message.role === 'user';
+    const isStreaming = message.isStreaming;
 
-        {/* Inline tool calls rendered above the response text */}
-        {message.toolCalls?.length > 0 && (
-          <div className="space-y-2 mb-3">
-            {message.toolCalls.map((tc, i) => (
-              <Tool key={i} defaultOpen={false}>
-                <ToolHeader
-                  title={tc.toolName}
-                  type="function"
-                  state={tc.state || 'output-available'}
-                />
-                <ToolContent>
-                  <ToolInput input={tc.args} />
-                </ToolContent>
-              </Tool>
-            ))}
-          </div>
-        )}
+    if (isUser) {
+        return (
+            <div className="flex justify-end mb-4 animate-fade-in-up">
+                <div className="max-w-[75%] flex items-end gap-2">
+                    <div className="bg-primary/15 border border-primary/20 text-foreground rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed">
+                        {message.content}
+                    </div>
+                    <div className="w-7 h-7 rounded-full bg-zinc-800 border border-border flex items-center justify-center shrink-0 mb-0.5">
+                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
-        <MessageContent className="group relative pr-10 text-gray-200 leading-relaxed">
-          <div className="prose prose-sm prose-invert max-w-none w-full !text-gray-200">
-            <MessageResponse>
-              {message.content || ''}
-            </MessageResponse>
-          </div>
+    return (
+        <div className="flex justify-start mb-4 animate-fade-in-up group">
+            <div className="max-w-[85%] flex items-start gap-2">
+                {/* Bot avatar */}
+                <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0 mt-1">
+                    <Bot className="w-3.5 h-3.5 text-primary" />
+                </div>
 
-          <MessageActions className="absolute -bottom-6 left-0 opacity-0 group-hover:opacity-100 transition-opacity">
-            <MessageAction
-              onClick={handleCopy}
-              tooltip="Copy markdown"
-              className="text-gray-500 hover:text-gray-300 w-auto h-auto p-1 text-xs"
-            >
-              {copied ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
-              <span className="ml-1">{copied ? 'Copied' : 'Copy'}</span>
-            </MessageAction>
-          </MessageActions>
-        </MessageContent>
-      </div>
-    </Message>
-  );
+                <div className="flex-1 min-w-0">
+                    {/* Thinking indicator */}
+                    {isStreaming && !message.content && (
+                        <div className="flex items-center gap-1 px-4 py-3 bg-zinc-900/60 border border-border rounded-2xl rounded-tl-sm w-fit">
+                            <span className="text-xs text-muted-foreground mr-1">BizCopilot is thinking</span>
+                            <span className="thinking-dot w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+                            <span className="thinking-dot w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+                            <span className="thinking-dot w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+                        </div>
+                    )}
+
+                    {/* Message content */}
+                    {message.content && (
+                        <div className="relative bg-zinc-900/60 border border-border rounded-2xl rounded-tl-sm px-4 py-3">
+                            <div className={cn('prose text-sm', isStreaming && 'streaming-cursor')}>
+                                <ReactMarkdown
+                                    components={{
+                                        // Custom code block rendering
+                                        code({ inline, className, children, ...props }) {
+                                            return inline ? (
+                                                <code className={className} {...props}>
+                                                    {children}
+                                                </code>
+                                            ) : (
+                                                <pre>
+                                                    <code className={className} {...props}>
+                                                        {children}
+                                                    </code>
+                                                </pre>
+                                            );
+                                        },
+                                        // Open links in new tab
+                                        a({ href, children, ...props }) {
+                                            return (
+                                                <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+                                                    {children}
+                                                </a>
+                                            );
+                                        },
+                                    }}
+                                >
+                                    {message.content}
+                                </ReactMarkdown>
+                            </div>
+
+                            {/* Copy button — only for completed messages */}
+                            {!isStreaming && (
+                                <div className="absolute top-2 right-2">
+                                    <CopyButton text={message.content} />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }

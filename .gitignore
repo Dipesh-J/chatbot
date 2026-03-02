@@ -4,3 +4,4 @@ client/dist/
 server/uploads/
 *.log
 .DS_Store
+reference-components/

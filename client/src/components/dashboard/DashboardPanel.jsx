@@ -1,27 +1,51 @@
+import { BarChart2 } from 'lucide-react';
 import { useDashboard } from '../../context/DashboardContext';
-import ChartCard from './ChartCard';
-import { BarChart3 } from 'lucide-react';
+import { ChartCard } from './ChartCard';
+import { ScrollArea } from '../ui/scroll-area';
 
-export default function DashboardPanel() {
-  const { charts } = useDashboard();
+export function DashboardPanel() {
+    const { charts, activeSessionId } = useDashboard();
 
-  if (charts.length === 0) {
+    if (!activeSessionId) {
+        return (
+            <div className="w-80 shrink-0 border-l border-border bg-zinc-950/50 flex items-center justify-center p-6">
+                <div className="text-center">
+                    <BarChart2 className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Start a chat to see charts here</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-      <div className="h-full flex items-center justify-center p-8">
-        <div className="text-center text-gray-400">
-          <BarChart3 size={40} className="mx-auto mb-3 opacity-50" />
-          <p className="text-sm">Charts will appear here when you ask for visualizations</p>
-          <p className="text-xs mt-1">Try: "Show revenue by month as a bar chart"</p>
-        </div>
-      </div>
-    );
-  }
+        <div className="w-80 shrink-0 border-l border-border bg-zinc-950/50 flex flex-col">
+            <div className="px-4 py-3 border-b border-border shrink-0">
+                <div className="flex items-center gap-2">
+                    <BarChart2 className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Dashboard</span>
+                    {charts.length > 0 && (
+                        <span className="ml-auto text-xs text-muted-foreground">{charts.length} chart{charts.length !== 1 ? 's' : ''}</span>
+                    )}
+                </div>
+            </div>
 
-  return (
-    <div className="h-full overflow-y-auto p-4 space-y-4">
-      {charts.map((chart) => (
-        <ChartCard key={chart.id} chart={chart} />
-      ))}
-    </div>
-  );
+            <ScrollArea className="flex-1">
+                {charts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                        <BarChart2 className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                        <p className="text-sm text-muted-foreground mb-1">No charts yet</p>
+                        <p className="text-xs text-muted-foreground/60">
+                            Ask BizCopilot to create a visualization and it'll appear here in real time.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="p-3 space-y-3">
+                        {charts.map((chart) => (
+                            <ChartCard key={chart.id} chart={chart} />
+                        ))}
+                    </div>
+                )}
+            </ScrollArea>
+        </div>
+    );
 }

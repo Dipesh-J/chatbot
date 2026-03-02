@@ -1,58 +1,75 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { getSessionCharts } from '../api/dashboard';
 import { useSocket } from './SocketContext';
-import { getCharts } from '../api/dashboard';
 
 const DashboardContext = createContext(null);
 
 export function DashboardProvider({ children }) {
-  const socket = useSocket();
-  const [charts, setCharts] = useState([]);
-  const [activeSessionId, setActiveSessionId] = useState(null);
+    const { socket } = useSocket();
+    const [charts, setCharts] = useState([]);
+    const [activeSessionId, setActiveSessionId] = useState(null);
+    const prevSessionRef = useRef(null);
 
-  useEffect(() => {
-    if (!socket) return;
+    const joinSession = useCallback(
+        async (sessionId) => {
+            if (!sessionId) return;
 
-    const handleChartUpdate = (chart) => {
-      setCharts((prev) => {
-        const exists = prev.find((c) => c.id === chart.id);
-        if (exists) return prev.map((c) => (c.id === chart.id ? chart : c));
-        return [...prev, chart];
-      });
-    };
+            // Leave previous session room
+            if (socket && prevSessionRef.current) {
+                socket.emit('leave:session', prevSessionRef.current);
+            }
 
-    socket.on('dashboard:chart_update', handleChartUpdate);
-    return () => socket.off('dashboard:chart_update', handleChartUpdate);
-  }, [socket]);
+            setActiveSessionId(sessionId);
+            prevSessionRef.current = sessionId;
 
-  const joinSession = useCallback(
-    async (sessionId) => {
-      if (socket && activeSessionId) {
-        socket.emit('leave:session', activeSessionId);
-      }
+            // Join new session room
+            if (socket) {
+                socket.emit('join:session', sessionId);
+            }
 
-      setActiveSessionId(sessionId);
+            // Load existing charts
+            try {
+                const res = await getSessionCharts(sessionId);
+                setCharts(res.data.charts || []);
+            } catch {
+                setCharts([]);
+            }
+        },
+        [socket]
+    );
 
-      if (socket) {
-        socket.emit('join:session', sessionId);
-      }
-
-      try {
-        const res = await getCharts(sessionId);
-        setCharts(res.data.charts || []);
-      } catch {
+    const clearCharts = useCallback(() => {
         setCharts([]);
-      }
-    },
-    [socket, activeSessionId]
-  );
+    }, []);
 
-  const clearCharts = useCallback(() => setCharts([]), []);
+    // Listen for real-time chart updates
+    useEffect(() => {
+        if (!socket) return;
 
-  return (
-    <DashboardContext.Provider value={{ charts, activeSessionId, joinSession, clearCharts }}>
-      {children}
-    </DashboardContext.Provider>
-  );
+        const handleChartUpdate = (chart) => {
+            setCharts((prev) => {
+                // Avoid duplicates
+                const exists = prev.find((c) => c.id === chart.id);
+                if (exists) return prev;
+                return [...prev, chart];
+            });
+        };
+
+        socket.on('dashboard:chart_update', handleChartUpdate);
+        return () => {
+            socket.off('dashboard:chart_update', handleChartUpdate);
+        };
+    }, [socket]);
+
+    return (
+        <DashboardContext.Provider value={{ charts, activeSessionId, joinSession, clearCharts }}>
+            {children}
+        </DashboardContext.Provider>
+    );
 }
 
-export const useDashboard = () => useContext(DashboardContext);
+export function useDashboard() {
+    const ctx = useContext(DashboardContext);
+    if (!ctx) throw new Error('useDashboard must be used inside DashboardProvider');
+    return ctx;
+}

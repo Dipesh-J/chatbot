@@ -10,7 +10,7 @@ export default {
     				'sans-serif'
     			],
     			heading: [
-    				'Space Grotesk"',
+    				'Space Grotesk',
     				'sans-serif'
     			]
     		},

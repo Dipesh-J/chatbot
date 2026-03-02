@@ -1,49 +1,39 @@
-import { useState, useEffect } from 'react';
-import Sidebar from './Sidebar';
-import Header from './Header';
+import { Header } from './Header';
+import { Sidebar } from './Sidebar';
+import { ReportsDrawer } from '../reports/ReportsDrawer';
+import { UploadModal } from '../csv/UploadModal';
+import { useState } from 'react';
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  return isMobile;
-}
+export function AppLayout({ children, chatProps, csvProps }) {
+    const { sessions, activeSession, startNewSession, selectSession, removeSession } = chatProps;
+    const { csvOpen, setCsvOpen } = csvProps;
+    const [reportsOpen, setReportsOpen] = useState(false);
 
-export default function AppLayout({ children, sessions, activeSession, onNewChat, onSelectSession, onDeleteSession, onDataUploaded }) {
-  const isMobile = useIsMobile();
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+    return (
+        <div className="flex flex-col h-full">
+            <Header
+                onOpenReports={() => setReportsOpen(true)}
+                onOpenCSVUpload={() => setCsvOpen(true)}
+            />
+            <div className="flex flex-1 min-h-0">
+                <Sidebar
+                    sessions={sessions}
+                    activeSession={activeSession}
+                    onNewChat={startNewSession}
+                    onSelectSession={selectSession}
+                    onDeleteSession={removeSession}
+                />
+                <main className="flex-1 flex min-w-0 min-h-0">
+                    {children}
+                </main>
+            </div>
 
-  // Close sidebar on mobile when navigating
-  useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
-  }, [activeSession?._id]);
-
-  return (
-    <div className="h-screen flex overflow-hidden bg-transparent">
-      {/* Mobile backdrop */}
-      {isMobile && sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-      <Sidebar
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-        sessions={sessions}
-        activeSession={activeSession}
-        onNewChat={onNewChat}
-        onSelectSession={onSelectSession}
-        onDeleteSession={onDeleteSession}
-        isMobile={isMobile}
-      />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} isMobile={isMobile} onDataUploaded={onDataUploaded} />
-        <main className="flex-1 overflow-hidden">{children}</main>
-      </div>
-    </div>
-  );
+            <ReportsDrawer open={reportsOpen} onClose={() => setReportsOpen(false)} />
+            <UploadModal
+                open={csvOpen}
+                onClose={() => setCsvOpen(false)}
+                csvProps={csvProps}
+            />
+        </div>
+    );
 }
