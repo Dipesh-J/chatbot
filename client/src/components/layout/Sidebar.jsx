@@ -1,9 +1,21 @@
-import { MessageSquarePlus, Trash2, MessageSquare } from 'lucide-react';
+import { MessageSquarePlus, Trash2, MessageSquare, MoreHorizontal, LogOut, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
-import { cn, truncate, formatDate } from '../../lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import { cn, truncate, formatDate, getInitials } from '../../lib/utils';
+import { useAuth } from '../../context/AuthContext';
 
 export function Sidebar({ sessions, activeSession, onNewChat, onSelectSession, onDeleteSession }) {
+    const { user, logout } = useAuth();
+
     return (
         <aside className="w-64 shrink-0 flex flex-col bg-zinc-950 border-r border-border h-full">
             {/* New Chat button */}
@@ -67,9 +79,42 @@ export function Sidebar({ sessions, activeSession, onNewChat, onSelectSession, o
                 )}
             </ScrollArea>
 
-            {/* Footer */}
+            {/* Profile footer */}
             <div className="p-3 border-t border-border">
-                <p className="text-xs text-muted-foreground/40 text-center">BizCopilot v1.0</p>
+                <div className="flex items-center gap-2.5">
+                    <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={user?.avatar} />
+                        <AvatarFallback className="text-xs bg-zinc-800">{getInitials(user?.name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate leading-snug">{user?.name}</p>
+                        <p className="text-xs text-muted-foreground/60 truncate">{user?.email}</p>
+                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+                                <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="top" align="end" className="w-48">
+                            <DropdownMenuLabel className="font-normal text-xs text-muted-foreground">
+                                {user?.email}
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="gap-2 cursor-pointer">
+                                <Settings className="w-4 h-4" />
+                                Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                className="gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                                onClick={logout}
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Sign out
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
         </aside>
     );

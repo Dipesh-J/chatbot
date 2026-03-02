@@ -5,15 +5,15 @@ import { computeKPIs } from '../../utils/kpiCalculator.js';
 
 const financialAnalysis = tool(
   async ({ query, datasetId }, config) => {
-    const userId = config.configurable?.userId;
-    if (!userId) return 'Error: No user context available.';
+    const sessionId = config.configurable?.sessionId;
+    if (!sessionId) return 'Error: No session context available.';
 
-    const filter = { userId, status: 'ready' };
+    const filter = { sessionId, status: 'ready' };
     if (datasetId) filter._id = datasetId;
 
     const datasets = await FinancialData.find(filter).lean();
     if (datasets.length === 0) {
-      return 'No financial data found. Please upload a CSV file first.';
+      return 'No financial data found for this chat. Please upload a CSV file first.';
     }
 
     const results = datasets.map((ds) => {

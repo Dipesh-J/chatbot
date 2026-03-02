@@ -5,10 +5,10 @@ import { buildChartConfig } from '../../utils/chartTemplates.js';
 
 const createVisualization = tool(
   async ({ chartType, title, metrics, datasetId }, config) => {
-    const userId = config.configurable?.userId;
-    if (!userId) return 'Error: No user context available.';
+    const sessionId = config.configurable?.sessionId;
+    if (!sessionId) return 'Error: No session context available.';
 
-    const filter = { userId, status: 'ready' };
+    const filter = { sessionId, status: 'ready' };
     if (datasetId) filter._id = datasetId;
 
     const dataset = await FinancialData.findOne(filter).lean();

@@ -7,20 +7,20 @@ import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn, formatDate } from '../../lib/utils';
 
-export function UploadModal({ open, onClose, csvProps }) {
+export function UploadModal({ open, onClose, csvProps, sessionId }) {
     const { datasets, uploading, uploadResult, loadDatasets, upload, removeDataset, setUploadResult } = csvProps;
 
     useEffect(() => {
-        if (open) loadDatasets();
-    }, [open, loadDatasets]);
+        if (open && sessionId) loadDatasets(sessionId);
+    }, [open, sessionId, loadDatasets]);
 
     const onDrop = useCallback(
         async (acceptedFiles) => {
             const file = acceptedFiles[0];
             if (!file) return;
-            await upload(file);
+            await upload(file, sessionId);
         },
-        [upload]
+        [upload, sessionId]
     );
 
     const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({

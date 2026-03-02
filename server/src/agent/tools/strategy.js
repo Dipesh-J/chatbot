@@ -5,10 +5,10 @@ import { computeKPIs } from '../../utils/kpiCalculator.js';
 
 const generateStrategy = tool(
   async ({ timeframe, focus }, config) => {
-    const userId = config.configurable?.userId;
-    if (!userId) return 'Error: No user context available.';
+    const sessionId = config.configurable?.sessionId;
+    if (!sessionId) return 'Error: No session context available.';
 
-    const dataset = await FinancialData.findOne({ userId, status: 'ready' })
+    const dataset = await FinancialData.findOne({ sessionId, status: 'ready' })
       .sort({ createdAt: -1 })
       .lean();
 

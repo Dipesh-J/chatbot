@@ -1,10 +1,11 @@
 import api from './client';
 
-export const getDatasets = () => api.get('/csv/datasets');
+export const getDatasets = (sessionId) => api.get('/csv/datasets', { params: { sessionId } });
 
-export const uploadDataset = (file) => {
+export const uploadDataset = (file, sessionId) => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('sessionId', sessionId);
     return api.post('/csv/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
     });

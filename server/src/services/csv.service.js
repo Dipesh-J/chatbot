@@ -4,7 +4,7 @@ import FinancialData from '../models/FinancialData.js';
 import { validateCSV, inferColumnTypes } from '../utils/csvValidator.js';
 import { computeSummary } from '../utils/kpiCalculator.js';
 
-export async function processCSV(filePath, fileName, userId) {
+export async function processCSV(filePath, fileName, userId, sessionId) {
   const fileContent = fs.readFileSync(filePath, 'utf-8');
   const parsed = Papa.parse(fileContent, {
     header: true,
@@ -33,6 +33,7 @@ export async function processCSV(filePath, fileName, userId) {
 
   const financialData = await FinancialData.create({
     userId,
+    sessionId,
     fileName,
     columns,
     rowCount: rows.length,

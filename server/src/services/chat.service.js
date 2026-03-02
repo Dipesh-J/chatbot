@@ -31,8 +31,8 @@ export async function sendMessage({ sessionId, userId, content, user, res }) {
     await session.save();
   }
 
-  // Get user's datasets
-  const dataSources = await FinancialData.find({ userId, status: 'ready' }).lean();
+  // Get session-scoped datasets only
+  const dataSources = await FinancialData.find({ sessionId, status: 'ready' }).lean();
 
   // Link datasets to session
   if (dataSources.length > 0 && session.dataSourceIds.length === 0) {

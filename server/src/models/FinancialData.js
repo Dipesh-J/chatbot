@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const financialDataSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'ChatSession', required: true, index: true },
     fileName: { type: String, required: true },
     columns: [
       {

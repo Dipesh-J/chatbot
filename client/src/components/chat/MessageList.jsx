@@ -21,7 +21,7 @@ export function MessageList({ messages, isStreaming, toolCalls, onSuggestionClic
 
     return (
         <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4">
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-4xl mx-auto">
                 {messages.map((msg) => (
                     <MessageBubble key={msg._id} message={msg} />
                 ))}

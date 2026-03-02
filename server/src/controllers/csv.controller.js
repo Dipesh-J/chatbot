@@ -7,7 +7,12 @@ export async function uploadCSV(req, res, next) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const result = await processCSV(req.file.path, req.file.originalname, req.user._id);
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+
+    const result = await processCSV(req.file.path, req.file.originalname, req.user._id, sessionId);
     res.status(201).json({
       id: result._id,
       fileName: result.fileName,
@@ -23,7 +28,11 @@ export async function uploadCSV(req, res, next) {
 
 export async function getDatasets(req, res, next) {
   try {
-    const datasets = await FinancialData.find({ userId: req.user._id })
+    const { sessionId } = req.query;
+    const filter = { userId: req.user._id };
+    if (sessionId) filter.sessionId = sessionId;
+
+    const datasets = await FinancialData.find(filter)
       .select('-rows')
       .sort({ createdAt: -1 })
       .lean();

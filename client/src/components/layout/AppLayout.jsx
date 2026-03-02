@@ -1,38 +1,37 @@
-import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { ReportsDrawer } from '../reports/ReportsDrawer';
+import { ContentTabs } from './ContentTabs';
 import { UploadModal } from '../csv/UploadModal';
-import { useState } from 'react';
 
-export function AppLayout({ children, chatProps, csvProps }) {
+export function AppLayout({ children, chatProps, csvProps, activeTab, onTabChange }) {
     const { sessions, activeSession, startNewSession, selectSession, removeSession } = chatProps;
     const { csvOpen, setCsvOpen } = csvProps;
-    const [reportsOpen, setReportsOpen] = useState(false);
 
     return (
         <div className="flex flex-col h-full">
-            <Header
-                onOpenReports={() => setReportsOpen(true)}
-                onOpenCSVUpload={() => setCsvOpen(true)}
-            />
             <div className="flex flex-1 min-h-0">
                 <Sidebar
                     sessions={sessions}
                     activeSession={activeSession}
                     onNewChat={startNewSession}
-                    onSelectSession={selectSession}
+                    onSelectSession={(session) => {
+                        selectSession(session);
+                        onTabChange('chat');
+                    }}
                     onDeleteSession={removeSession}
                 />
-                <main className="flex-1 flex min-w-0 min-h-0">
-                    {children}
-                </main>
+                <div className="flex-1 flex flex-col min-w-0 min-h-0">
+                    <ContentTabs activeTab={activeTab} onTabChange={onTabChange} />
+                    <main className="flex-1 flex min-w-0 min-h-0">
+                        {children}
+                    </main>
+                </div>
             </div>
 
-            <ReportsDrawer open={reportsOpen} onClose={() => setReportsOpen(false)} />
             <UploadModal
                 open={csvOpen}
                 onClose={() => setCsvOpen(false)}
                 csvProps={csvProps}
+                sessionId={activeSession?._id}
             />
         </div>
     );

@@ -7,20 +7,25 @@ export function useCSVUpload() {
     const [uploading, setUploading] = useState(false);
     const [uploadResult, setUploadResult] = useState(null);
 
-    const loadDatasets = useCallback(async () => {
+    const loadDatasets = useCallback(async (sessionId) => {
+        if (!sessionId) return;
         try {
-            const res = await getDatasets();
+            const res = await getDatasets(sessionId);
             setDatasets(res.data.datasets || []);
         } catch {
             toast.error('Failed to load datasets');
         }
     }, []);
 
-    const upload = useCallback(async (file) => {
+    const upload = useCallback(async (file, sessionId) => {
+        if (!sessionId) {
+            toast.error('No active chat session');
+            return null;
+        }
         setUploading(true);
         setUploadResult(null);
         try {
-            const res = await uploadDataset(file);
+            const res = await uploadDataset(file, sessionId);
             const dataset = res.data;
             setDatasets((prev) => [dataset, ...prev]);
             setUploadResult(dataset);

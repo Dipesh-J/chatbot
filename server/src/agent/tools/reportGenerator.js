@@ -8,9 +8,9 @@ const generateReport = tool(
   async ({ title, type }, config) => {
     const userId = config.configurable?.userId;
     const sessionId = config.configurable?.sessionId;
-    if (!userId) return 'Error: No user context available.';
+    if (!sessionId) return 'Error: No session context available.';
 
-    const dataset = await FinancialData.findOne({ userId, status: 'ready' })
+    const dataset = await FinancialData.findOne({ sessionId, status: 'ready' })
       .sort({ createdAt: -1 })
       .lean();
 
