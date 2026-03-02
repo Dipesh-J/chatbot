@@ -77,6 +77,8 @@ export function ChatPage() {
                         isStreaming={isStreaming}
                         hasMessages={messages.length > 0}
                         onUploadClick={() => setCsvOpen(true)}
+                        onFileUpload={csvState.upload}
+                        sessionId={activeSession?._id}
                     />
                 </div>
 

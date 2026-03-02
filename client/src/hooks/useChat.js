@@ -16,7 +16,7 @@ export function useChat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [toolCalls, setToolCalls] = useState([]);
   const abortControllerRef = useRef(null);
-  const { joinSession, clearCharts } = useDashboard();
+  const { joinSession, clearCharts, refreshCharts } = useDashboard();
 
   const loadSessions = useCallback(async () => {
     try {
@@ -160,6 +160,8 @@ export function useChat() {
                       : s
                   )
                 );
+                // Fallback poll for charts in case the socket event was missed
+                setTimeout(() => refreshCharts(), 1000);
               } else if (event.type === 'error') {
                 toast.error(event.content || 'An error occurred');
                 setMessages((prev) =>

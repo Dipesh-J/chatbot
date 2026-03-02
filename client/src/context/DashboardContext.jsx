@@ -8,22 +8,22 @@ export function DashboardProvider({ children }) {
     const { socket } = useSocket();
     const [charts, setCharts] = useState([]);
     const [activeSessionId, setActiveSessionId] = useState(null);
-    const prevSessionRef = useRef(null);
+    const activeSessionRef = useRef(null); // always up-to-date without causing re-renders
 
     const joinSession = useCallback(
         async (sessionId) => {
             if (!sessionId) return;
 
             // Leave previous session room
-            if (socket && prevSessionRef.current) {
-                socket.emit('leave:session', prevSessionRef.current);
+            if (socket && activeSessionRef.current && activeSessionRef.current !== sessionId) {
+                socket.emit('leave:session', activeSessionRef.current);
             }
 
             setActiveSessionId(sessionId);
-            prevSessionRef.current = sessionId;
+            activeSessionRef.current = sessionId;
 
-            // Join new session room
-            if (socket) {
+            // Join new session room (only if socket is connected)
+            if (socket?.connected) {
                 socket.emit('join:session', sessionId);
             }
 
@@ -42,15 +42,39 @@ export function DashboardProvider({ children }) {
         setCharts([]);
     }, []);
 
+    // Re-join session room whenever the socket (re)connects
+    // This handles: cold start where socket connects after joinSession is first called
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleConnect = () => {
+            const sessionId = activeSessionRef.current;
+            if (sessionId) {
+                socket.emit('join:session', sessionId);
+            }
+        };
+
+        socket.on('connect', handleConnect);
+
+        // If already connected when this effect runs, join immediately
+        if (socket.connected && activeSessionRef.current) {
+            socket.emit('join:session', activeSessionRef.current);
+        }
+
+        return () => {
+            socket.off('connect', handleConnect);
+        };
+    }, [socket]);
+
     // Listen for real-time chart updates
     useEffect(() => {
         if (!socket) return;
 
         const handleChartUpdate = (chart) => {
             setCharts((prev) => {
-                // Avoid duplicates
+                // Replace if exists (update), otherwise append
                 const exists = prev.find((c) => c.id === chart.id);
-                if (exists) return prev;
+                if (exists) return prev.map((c) => c.id === chart.id ? chart : c);
                 return [...prev, chart];
             });
         };
@@ -61,8 +85,20 @@ export function DashboardProvider({ children }) {
         };
     }, [socket]);
 
+    // Expose a refresh function for polling fallback after AI responds
+    const refreshCharts = useCallback(async () => {
+        const sessionId = activeSessionRef.current;
+        if (!sessionId) return;
+        try {
+            const res = await getSessionCharts(sessionId);
+            setCharts(res.data.charts || []);
+        } catch {
+            // silent
+        }
+    }, []);
+
     return (
-        <DashboardContext.Provider value={{ charts, activeSessionId, joinSession, clearCharts }}>
+        <DashboardContext.Provider value={{ charts, activeSessionId, joinSession, clearCharts, refreshCharts }}>
             {children}
         </DashboardContext.Provider>
     );

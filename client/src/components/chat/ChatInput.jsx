@@ -14,7 +14,7 @@ const REPORT_PROMPT =
 const DASHBOARD_PROMPT =
     'Generate an interactive dashboard with charts and visualizations based on the uploaded data.';
 
-export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick }) {
+export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick, onFileUpload, sessionId }) {
     const [value, setValue] = useState('');
     const [selectedModel, setSelectedModel] = useState(MODELS[0]);
     const [modelOpen, setModelOpen] = useState(false);
@@ -49,7 +49,8 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick }) {
 
     const handleSubmit = useCallback(() => {
         const trimmed = value.trim();
-        if ((!trimmed && attachedFiles.length === 0) || isStreaming) return;
+        const isUploading = attachedFiles.some((f) => f.status === 'uploading');
+        if ((!trimmed && attachedFiles.filter(f => f.status === 'done').length === 0) || isStreaming || isUploading) return;
         // Pass the user's raw text and mode separately — prompt injection happens in useChat
         onSend(trimmed || 'Sent with attachments', outputMode);
         setValue('');
@@ -64,13 +65,35 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick }) {
         }
     };
 
-    const handleFiles = useCallback((files) => {
+    // Upload files immediately to the backend; show per-file status chips
+    const handleFiles = useCallback(async (files) => {
         const fileArr = Array.from(files);
-        setAttachedFiles((prev) => [
-            ...prev,
-            ...fileArr.map((f) => ({ name: f.name, size: f.size, type: f.type, file: f, id: `${f.name}-${Date.now()}` })),
-        ]);
-    }, []);
+        for (const f of fileArr) {
+            const id = `${f.name}-${Date.now()}`;
+            // Add chip in uploading state
+            setAttachedFiles((prev) => [
+                ...prev,
+                { id, name: f.name, size: f.size, status: 'uploading' },
+            ]);
+            try {
+                if (onFileUpload && sessionId) {
+                    await onFileUpload(f, sessionId);
+                    setAttachedFiles((prev) =>
+                        prev.map((a) => a.id === id ? { ...a, status: 'done' } : a)
+                    );
+                } else {
+                    // Fallback: no upload fn provided, just mark as ready
+                    setAttachedFiles((prev) =>
+                        prev.map((a) => a.id === id ? { ...a, status: 'done' } : a)
+                    );
+                }
+            } catch {
+                setAttachedFiles((prev) =>
+                    prev.map((a) => a.id === id ? { ...a, status: 'error' } : a)
+                );
+            }
+        }
+    }, [onFileUpload, sessionId]);
 
     // Drag-and-drop handlers
     const handleDragEnter = (e) => {
@@ -133,12 +156,26 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick }) {
                         {attachedFiles.map((f) => (
                             <div
                                 key={f.id}
-                                className="flex items-center gap-2 bg-zinc-900 border border-border rounded-xl px-3 py-2 text-xs group"
+                                className={cn(
+                                    'flex items-center gap-2 border rounded-xl px-3 py-2 text-xs group transition-all',
+                                    f.status === 'uploading' && 'bg-zinc-900 border-zinc-600',
+                                    f.status === 'done' && 'bg-emerald-500/10 border-emerald-500/30',
+                                    f.status === 'error' && 'bg-red-500/10 border-red-500/30',
+                                )}
                             >
-                                <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                {f.status === 'uploading' && (
+                                    <svg className="w-3.5 h-3.5 text-zinc-400 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                    </svg>
+                                )}
+                                {f.status === 'done' && <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                                {f.status === 'error' && <X className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                                 <div className="min-w-0">
                                     <p className="font-medium text-foreground truncate max-w-[140px]">{f.name}</p>
-                                    <p className="text-muted-foreground">{formatFileSize(f.size)}</p>
+                                    <p className="text-muted-foreground">
+                                        {f.status === 'uploading' ? 'Uploading...' : f.status === 'error' ? 'Failed' : formatFileSize(f.size)}
+                                    </p>
                                 </div>
                                 <button
                                     onClick={() => removeFile(f.id)}
