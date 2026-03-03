@@ -195,6 +195,15 @@ export function useConnectors() {
         }
     }, []);
 
+    const runQuery = useCallback(async (connectorId, query, spreadsheetId) => {
+        try {
+            const res = await api.runConnectorQuery(connectorId, query, spreadsheetId);
+            return res.data;
+        } catch (err) {
+            return { success: false, error: err.response?.data?.error || 'Query failed' };
+        }
+    }, []);
+
     return {
         connectors,
         mcpTools,
@@ -216,6 +225,7 @@ export function useConnectors() {
             removeMcpTool,
             testMcpTool,
             suggestTools,
+            runQuery,
             connectGoogleSheets,
         },
     };

@@ -6,6 +6,8 @@ export const createConnector = (data) => api.post('/connectors', data);
 export const testBeforeSave = (data) => api.post('/connectors/test', data);
 export const testConnector = (id) => api.post(`/connectors/${id}/test`);
 export const introspectConnector = (id, data = {}) => api.post(`/connectors/${id}/introspect`, data);
+export const runConnectorQuery = (id, query, spreadsheetId) =>
+  api.post(`/connectors/${id}/run-query`, { query, spreadsheetId });
 export const updateConnector = (id, data) => api.put(`/connectors/${id}`, data);
 export const deleteConnector = (id) => api.delete(`/connectors/${id}`);
 export const getGoogleSheetsAuthUrl = (name) =>

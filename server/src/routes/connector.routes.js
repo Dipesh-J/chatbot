@@ -5,6 +5,7 @@ import {
   testBeforeSave,
   testConnector,
   introspectConnector,
+  runQuery,
   updateConnector,
   deleteConnector,
   googleSheetsAuthStart,
@@ -19,6 +20,7 @@ router.get('/', auth, listConnectors);
 router.post('/test', auth, testBeforeSave);
 router.post('/:id/test', auth, testConnector);
 router.post('/:id/introspect', auth, introspectConnector);
+router.post('/:id/run-query', auth, runQuery);
 router.put('/:id', auth, updateConnector);
 router.delete('/:id', auth, deleteConnector);
 

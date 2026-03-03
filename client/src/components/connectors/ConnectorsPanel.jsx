@@ -136,6 +136,7 @@ export function ConnectorsPanel({ connectors, mcpTools, actions }) {
                     tool={queryBuilderState.tool || editingTool}
                     onSave={editingTool ? actions.updateMcpTool : actions.addMcpTool}
                     onTest={actions.testMcpTool}
+                    onRunQuery={actions.runQuery}
                 />
             )}
         </ScrollArea>

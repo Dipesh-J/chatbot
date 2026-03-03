@@ -9,11 +9,12 @@ import createVisualization from './tools/visualization.js';
 import generateStrategy from './tools/strategy.js';
 import generateReport from './tools/reportGenerator.js';
 import shareToSlack from './tools/slackIntegration.js';
+import createDashboard from './tools/dashboard.js';
 import McpTool from '../models/McpTool.js';
 import Connector from '../models/Connector.js';
 import { buildDynamicTool } from './tools/dynamicMcpTool.js';
 
-const staticTools = [financialAnalysis, createVisualization, generateStrategy, generateReport, shareToSlack];
+const staticTools = [financialAnalysis, createVisualization, createDashboard, generateStrategy, generateReport, shareToSlack];
 
 const llm = new ChatGoogleGenerativeAI({
   model: 'gemini-2.5-flash',
@@ -101,10 +102,12 @@ export async function runAgent({ userMessage, user, dataSources, sessionId, mcpT
   const charts = [];
   for (const msg of result.messages) {
     if (msg._getType?.() === 'tool' || msg.constructor?.name === 'ToolMessage') {
-      if (msg.name === 'create_visualization' || msg.name === 'createVisualizationTool') {
+      if (msg.name === 'create_visualization' || msg.name === 'createVisualizationTool' || msg.name === 'create_dashboard') {
         try {
           const parsed = JSON.parse(msg.content);
           if (parsed.chart) charts.push(parsed.chart);
+          if (parsed.charts) charts.push(...parsed.charts);
+          if (parsed.kpiCard) charts.push(parsed.kpiCard);
         } catch { }
       }
     }
@@ -165,10 +168,12 @@ export async function streamAgent({ userMessage, user, dataSources, sessionId, o
 
         // Extract charts from tool results securely
         if (msg._getType?.() === 'tool' || msg.constructor?.name === 'ToolMessage') {
-          if (msg.name === 'create_visualization' || msg.name === 'createVisualizationTool') {
+          if (msg.name === 'create_visualization' || msg.name === 'createVisualizationTool' || msg.name === 'create_dashboard') {
             try {
               const parsed = JSON.parse(msg.content);
               if (parsed.chart) charts.push(parsed.chart);
+              if (parsed.charts) charts.push(...parsed.charts);
+              if (parsed.kpiCard) charts.push(parsed.kpiCard);
             } catch { }
           }
         }

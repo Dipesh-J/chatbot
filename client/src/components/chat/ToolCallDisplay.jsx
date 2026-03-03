@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils';
 const TOOL_LABELS = {
     financial_analysis: { label: 'Querying your data...', icon: Database, color: 'text-blue-400' },
     create_visualization: { label: 'Creating a chart...', icon: BarChart2, color: 'text-purple-400' },
+    create_dashboard: { label: 'Building your dashboard...', icon: BarChart2, color: 'text-indigo-400' },
     generate_strategy: { label: 'Building your strategy...', icon: FileText, color: 'text-orange-400' },
     generate_report: { label: 'Generating report...', icon: FileText, color: 'text-green-400' },
     share_to_slack: { label: 'Sharing to Slack...', icon: Share2, color: 'text-pink-400' },

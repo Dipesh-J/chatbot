@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { ScrollArea } from '../ui/scroll-area';
-import { Loader2, Play, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Play, CheckCircle2, XCircle, Save } from 'lucide-react';
 
-export function QueryToolBuilder({ open, onClose, connector, tableName, tool, onSave, onTest }) {
+export function QueryToolBuilder({ open, onClose, connector, tableName, tool, onSave, onTest, onRunQuery }) {
     const isSheets = connector?.type === 'google_sheets';
     const defaultQuery = tool?.config?.query || (tableName
         ? (isSheets ? `'${tableName}'!A:Z` : `SELECT * FROM "${tableName}" LIMIT 100`)
@@ -14,16 +13,20 @@ export function QueryToolBuilder({ open, onClose, connector, tableName, tool, on
     const [description, setDescription] = useState(tool?.description || (tableName ? `Query data from ${tableName}` : ''));
     const [query, setQuery] = useState(defaultQuery);
     const [saving, setSaving] = useState(false);
-    const [testing, setTesting] = useState(false);
+    const [running, setRunning] = useState(false);
     const [testResult, setTestResult] = useState(null);
 
-    const handleTest = async () => {
-        if (!tool?._id) return;
-        setTesting(true);
+    const handleRunQuery = async () => {
+        setRunning(true);
         setTestResult(null);
-        const result = await onTest(tool._id);
-        setTestResult(result);
-        setTesting(false);
+        try {
+            const spreadsheetId = isSheets ? connector.dbSchema?.spreadsheetId : undefined;
+            const result = await onRunQuery(connector._id, query, spreadsheetId);
+            setTestResult(result);
+        } catch (err) {
+            setTestResult({ success: false, error: err.message || 'Query failed' });
+        }
+        setRunning(false);
     };
 
     const handleSave = async () => {
@@ -72,11 +75,29 @@ export function QueryToolBuilder({ open, onClose, connector, tableName, tool, on
                             className="flex w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm font-mono shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring min-h-[120px] resize-y"
                             placeholder={isSheets ? "'Sheet1'!A:Z" : "SELECT * FROM ..."}
                             value={query}
-                            onChange={(e) => setQuery(e.target.value)}
+                            onChange={(e) => {
+                                setQuery(e.target.value);
+                                setTestResult(null);
+                            }}
                         />
                     </div>
 
-                    {/* Test result preview */}
+                    {/* Run query button — inline with the query editor */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRunQuery}
+                        disabled={running || !query.trim()}
+                        className="w-full"
+                    >
+                        {running
+                            ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" />
+                            : <Play className="w-3 h-3 mr-1.5" />
+                        }
+                        {running ? 'Running...' : 'Run Query'}
+                    </Button>
+
+                    {/* Query result preview */}
                     {testResult && (
                         <div className="space-y-2">
                             <div className={`flex items-center gap-2 text-sm p-2 rounded-lg ${testResult.success ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
@@ -84,46 +105,41 @@ export function QueryToolBuilder({ open, onClose, connector, tableName, tool, on
                                 {testResult.success ? `${testResult.rowCount} rows returned${testResult.truncated ? ' (showing first 10)' : ''}` : testResult.error}
                             </div>
                             {testResult.success && testResult.data?.length > 0 && (
-                                <ScrollArea className="max-h-[200px]">
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-xs">
-                                            <thead>
-                                                <tr className="border-b border-border/50">
-                                                    {Object.keys(testResult.data[0]).map((key) => (
-                                                        <th key={key} className="text-left p-1.5 text-muted-foreground font-medium whitespace-nowrap">
-                                                            {key}
-                                                        </th>
+                                <div className="max-h-[200px] overflow-auto rounded-md border border-border/40">
+                                    <table className="text-xs" style={{ minWidth: 'max-content' }}>
+                                        <thead className="sticky top-0 bg-zinc-900 z-10">
+                                            <tr className="border-b border-border/50">
+                                                {Object.keys(testResult.data[0]).map((key) => (
+                                                    <th key={key} className="text-left px-2.5 py-1.5 text-muted-foreground font-medium whitespace-nowrap">
+                                                        {key}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {testResult.data.map((row, i) => (
+                                                <tr key={i} className="border-b border-border/30">
+                                                    {Object.values(row).map((val, j) => (
+                                                        <td key={j} className="px-2.5 py-1.5 text-foreground whitespace-nowrap max-w-[250px] truncate">
+                                                            {val === null ? <span className="text-muted-foreground/40">null</span> : String(val)}
+                                                        </td>
                                                     ))}
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                {testResult.data.map((row, i) => (
-                                                    <tr key={i} className="border-b border-border/30">
-                                                        {Object.values(row).map((val, j) => (
-                                                            <td key={j} className="p-1.5 text-foreground whitespace-nowrap max-w-[200px] truncate">
-                                                                {val === null ? <span className="text-muted-foreground/40">null</span> : String(val)}
-                                                            </td>
-                                                        ))}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </ScrollArea>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </div>
                     )}
                 </div>
 
                 <DialogFooter className="gap-2">
-                    {tool?._id && (
-                        <Button variant="outline" onClick={handleTest} disabled={testing}>
-                            {testing ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
-                            Test Query
-                        </Button>
-                    )}
                     <Button onClick={handleSave} disabled={saving || !name || !query}>
-                        {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+                        {saving
+                            ? <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            : <Save className="w-3 h-3 mr-1" />
+                        }
                         {tool?._id ? 'Update' : 'Save'} Tool
                     </Button>
                 </DialogFooter>

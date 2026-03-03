@@ -1,7 +1,7 @@
 import McpTool from '../models/McpTool.js';
 import Connector from '../models/Connector.js';
 import { decrypt } from '../utils/encryption.js';
-import { createKnexClient } from '../utils/knexConnector.js';
+import { createKnexClient, prepareConfig } from '../utils/knexConnector.js';
 import { readRange } from '../utils/googleSheetsConnector.js';
 
 function columnLetter(n) {
@@ -153,7 +153,8 @@ export async function testToolQuery(toolId, userId) {
     }
   }
 
-  const db = createKnexClient(connector.type, config);
+  const resolvedConfig = await prepareConfig(config);
+  const db = createKnexClient(connector.type, resolvedConfig);
 
   try {
     const result = await db.raw(tool.config.query);

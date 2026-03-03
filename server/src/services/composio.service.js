@@ -76,3 +76,24 @@ export async function hasSlackConnection(entityId) {
 export function isComposioConfigured() {
   return !!env.COMPOSIO_API_KEY;
 }
+
+/**
+ * Disconnect/delete the Slack connection for a user entity.
+ */
+export async function disconnectSlack(entityId) {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    const entity = client.getEntity(entityId);
+    const connection = await entity.getConnection({ app: 'slack' });
+    if (!connection) return true; // Already disconnected
+
+    // The SDK's delete method is on connectedAccounts, not on the connection object itself
+    await client.connectedAccounts.delete({ connectedAccountId: connection.id });
+    return true;
+  } catch (error) {
+    console.error('Composio disconnect error:', error.message);
+    throw error;
+  }
+}

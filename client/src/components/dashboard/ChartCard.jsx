@@ -22,6 +22,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 function renderChart(type, config) {
+    if (type === 'kpi') return null;
     const { data, xKey, yKeys = [], colors = COLORS } = config;
 
     if (!data?.length) return <p className="text-muted-foreground text-xs text-center pt-4">No data</p>;

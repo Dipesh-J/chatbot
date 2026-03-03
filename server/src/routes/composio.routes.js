@@ -4,6 +4,7 @@ import {
   getSlackAuthUrl,
   hasSlackConnection,
   isComposioConfigured,
+  disconnectSlack,
 } from '../services/composio.service.js';
 
 const router = Router();
@@ -32,6 +33,23 @@ router.post('/connect/slack', auth, async (req, res) => {
   }
 
   res.json({ authUrl });
+});
+
+// Disconnect Slack integration
+router.delete('/slack', auth, async (req, res) => {
+  if (!isComposioConfigured()) {
+    return res.status(400).json({ error: 'Composio not configured' });
+  }
+
+  try {
+    await disconnectSlack(req.user._id.toString());
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Disconnect Slack route error:', error.message);
+    res.status(500).json({
+      error: error.message || 'Failed to disconnect Slack. Please try again.',
+    });
+  }
 });
 
 export default router;

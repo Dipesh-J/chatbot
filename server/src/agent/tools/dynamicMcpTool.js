@@ -1,7 +1,7 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { decrypt, encrypt } from '../../utils/encryption.js';
-import { createKnexClient } from '../../utils/knexConnector.js';
+import { createKnexClient, prepareConfig } from '../../utils/knexConnector.js';
 import { readRange, refreshAccessToken } from '../../utils/googleSheetsConnector.js';
 import Connector from '../../models/Connector.js';
 
@@ -37,7 +37,7 @@ export function buildDynamicTool(mcpTool, connector) {
           return await executeSheetsQuery(input, mcpTool, connector);
         }
 
-        const config = decrypt(connector.config);
+        const config = await prepareConfig(decrypt(connector.config));
         const db = createKnexClient(connector.type, config);
 
         try {

@@ -1,10 +1,14 @@
 import { BarChart2 } from 'lucide-react';
 import { useDashboard } from '../../context/DashboardContext';
 import { ChartCard } from './ChartCard';
+import { KpiCard } from './KpiCard';
 import { ScrollArea } from '../ui/scroll-area';
 
 export function DashboardPanel() {
     const { charts, activeSessionId } = useDashboard();
+
+    const kpiCards = charts.filter((c) => c.type === 'kpi');
+    const chartCards = charts.filter((c) => c.type !== 'kpi');
 
     if (!activeSessionId) {
         return (
@@ -24,7 +28,7 @@ export function DashboardPanel() {
                     <BarChart2 className="w-4 h-4 text-primary" />
                     <span className="text-sm font-medium text-foreground">Dashboard</span>
                     {charts.length > 0 && (
-                        <span className="ml-auto text-xs text-muted-foreground">{charts.length} chart{charts.length !== 1 ? 's' : ''}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">{charts.length} item{charts.length !== 1 ? 's' : ''}</span>
                     )}
                 </div>
             </div>
@@ -40,7 +44,10 @@ export function DashboardPanel() {
                     </div>
                 ) : (
                     <div className="p-3 space-y-3">
-                        {charts.map((chart) => (
+                        {kpiCards.map((card) => (
+                            <KpiCard key={card.id} chart={card} />
+                        ))}
+                        {chartCards.map((chart) => (
                             <ChartCard key={chart.id} chart={chart} />
                         ))}
                     </div>

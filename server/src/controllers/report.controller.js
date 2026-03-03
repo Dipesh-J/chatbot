@@ -58,7 +58,9 @@ export async function shareToSlack(req, res, next) {
     // Fall back to webhook
     const webhookUrl = user?.slackConfig?.webhookUrl;
     if (!webhookUrl) {
-      return res.status(400).json({ error: 'Slack not connected. Configure a webhook or connect via Composio in settings.' });
+      return res.status(400).json({
+        error: 'Slack not connected. Go to Settings → Integrations and click "Connect Slack" to authorize your Slack workspace.',
+      });
     }
 
     await axios.post(webhookUrl, {

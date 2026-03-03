@@ -10,7 +10,7 @@ const chatSessionSchema = new mongoose.Schema(
       charts: [
         {
           id: String,
-          type: { type: String, enum: ['bar', 'line', 'pie', 'area'] },
+          type: { type: String, enum: ['bar', 'line', 'pie', 'area', 'kpi'] },
           title: String,
           config: mongoose.Schema.Types.Mixed,
           createdAt: { type: Date, default: Date.now },

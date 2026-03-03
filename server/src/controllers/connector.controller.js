@@ -82,6 +82,27 @@ export async function deleteConnector(req, res, next) {
   }
 }
 
+export async function runQuery(req, res, next) {
+  try {
+    const { query, spreadsheetId } = req.body;
+    if (!query) {
+      return res.status(400).json({ error: 'query is required' });
+    }
+    const result = await connectorService.runAdHocQuery(
+      req.params.id,
+      req.user._id,
+      query,
+      spreadsheetId
+    );
+    res.json(result);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.json({ success: false, error: error.message });
+  }
+}
+
 export async function googleSheetsAuthStart(req, res, next) {
   try {
     const { name } = req.query;

@@ -1,4 +1,18 @@
 import knex from 'knex';
+import dns from 'dns/promises';
+
+/**
+ * Resolve a hostname to its IPv4 address.
+ * Falls back to the original host if resolution fails (e.g. already an IP).
+ */
+async function resolveIPv4(host) {
+  try {
+    const { address } = await dns.lookup(host, { family: 4 });
+    return address;
+  } catch {
+    return host;
+  }
+}
 
 export function createKnexClient(type, config) {
   const client = type === 'postgresql' ? 'pg' : 'mysql2';
@@ -22,8 +36,18 @@ export function createKnexClient(type, config) {
   });
 }
 
+/**
+ * Prepare config for connection — resolves hostname to IPv4 to avoid
+ * EHOSTUNREACH on networks without IPv6 connectivity.
+ */
+export async function prepareConfig(config) {
+  const resolved = { ...config, host: await resolveIPv4(config.host) };
+  return resolved;
+}
+
 export async function testConnection(type, config) {
-  const db = createKnexClient(type, config);
+  const resolvedConfig = await prepareConfig(config);
+  const db = createKnexClient(type, resolvedConfig);
   try {
     await db.raw('SELECT 1');
     return { success: true };
@@ -35,7 +59,8 @@ export async function testConnection(type, config) {
 }
 
 export async function introspectSchema(type, config) {
-  const db = createKnexClient(type, config);
+  const resolvedConfig = await prepareConfig(config);
+  const db = createKnexClient(type, resolvedConfig);
   try {
     let tables;
 
@@ -68,17 +93,26 @@ export async function introspectSchema(type, config) {
 
       // Get primary keys
       let primaryKeys = [];
-      if (type === 'postgresql') {
-        const pkResult = await db.raw(`
-          SELECT a.attname
-          FROM pg_index i
-          JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-          WHERE i.indrelid = ?::regclass AND i.indisprimary
-        `, [tableName]);
-        primaryKeys = pkResult.rows.map((r) => r.attname);
-      } else {
-        const pkResult = await db.raw(`SHOW KEYS FROM ?? WHERE Key_name = 'PRIMARY'`, [tableName]);
-        primaryKeys = pkResult[0].map((r) => r.Column_name);
+      try {
+        if (type === 'postgresql') {
+          const pkResult = await db.raw(`
+            SELECT kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON tc.constraint_name = kcu.constraint_name
+              AND tc.table_schema = kcu.table_schema
+            WHERE tc.table_schema = 'public'
+              AND tc.table_name = ?
+              AND tc.constraint_type = 'PRIMARY KEY'
+          `, [tableName]);
+          primaryKeys = pkResult.rows.map((r) => r.column_name);
+        } else {
+          const pkResult = await db.raw(`SHOW KEYS FROM ?? WHERE Key_name = 'PRIMARY'`, [tableName]);
+          primaryKeys = pkResult[0].map((r) => r.Column_name);
+        }
+      } catch {
+        // Skip primary key detection if it fails for this table
+        primaryKeys = [];
       }
 
       const columns = Object.entries(columnInfo).map(([colName, info]) => ({

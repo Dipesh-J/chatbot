@@ -9,7 +9,7 @@ passport.use(
   new LocalStrategy({ usernameField: 'email' }, async (email, password, done) => {
     try {
       const user = await User.findOne({ email: email.toLowerCase() });
-      if (!user || user.authProvider !== 'local') {
+      if (!user || !user.passwordHash) {
         return done(null, false, { message: 'Invalid email or password' });
       }
       const isMatch = await bcrypt.compare(password, user.passwordHash);
@@ -39,7 +39,7 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
           user = await User.findOne({ email: profile.emails[0].value });
           if (user) {
             user.googleId = profile.id;
-            user.authProvider = 'google';
+            // Don't overwrite authProvider — preserve both login methods
             if (!user.avatar && profile.photos[0]) user.avatar = profile.photos[0].value;
             await user.save();
             return done(null, user);

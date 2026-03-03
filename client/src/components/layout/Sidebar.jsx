@@ -13,7 +13,7 @@ import {
 import { cn, truncate, formatDate, getInitials } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 
-export function Sidebar({ sessions, activeSession, onNewChat, onSelectSession, onDeleteSession, onConnectorsClick, activeTab }) {
+export function Sidebar({ sessions, activeSession, onNewChat, onSelectSession, onDeleteSession, onConnectorsClick, onSettingsClick, activeTab }) {
     const { user, logout } = useAuth();
 
     return (
@@ -119,7 +119,7 @@ export function Sidebar({ sessions, activeSession, onNewChat, onSelectSession, o
                                 {user?.email}
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="gap-2 cursor-pointer">
+                            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={onSettingsClick}>
                                 <Settings className="w-4 h-4" />
                                 Settings
                             </DropdownMenuItem>

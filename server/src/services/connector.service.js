@@ -1,7 +1,7 @@
 import Connector from '../models/Connector.js';
 import McpTool from '../models/McpTool.js';
 import { encrypt, decrypt } from '../utils/encryption.js';
-import { testConnection, introspectSchema } from '../utils/knexConnector.js';
+import { createKnexClient, prepareConfig, testConnection, introspectSchema } from '../utils/knexConnector.js';
 import { testSheetsConnection, introspectSheets, extractSpreadsheetId } from '../utils/googleSheetsConnector.js';
 
 export async function createConnector(userId, { type, name, config }) {
@@ -97,6 +97,42 @@ export async function deleteConnector(connectorId, userId) {
   await McpTool.deleteMany({ connectorId });
 
   return { message: 'Connector and associated tools deleted' };
+}
+
+const MAX_PREVIEW_ROWS = 10;
+
+export async function runAdHocQuery(connectorId, userId, query, spreadsheetId) {
+  const connector = await Connector.findOne({ _id: connectorId, userId });
+  if (!connector) throw Object.assign(new Error('Connector not found'), { status: 404 });
+
+  const config = decrypt(connector.config);
+
+  if (connector.type === 'google_sheets') {
+    const { readRange } = await import('../utils/googleSheetsConnector.js');
+    const sheetsConfig = { ...config, spreadsheetId: spreadsheetId || connector.dbSchema?.spreadsheetId };
+    const result = await readRange(sheetsConfig, query);
+    return {
+      success: true,
+      rowCount: result.rows.length,
+      data: result.rows.slice(0, MAX_PREVIEW_ROWS),
+      truncated: result.rows.length > MAX_PREVIEW_ROWS,
+    };
+  }
+
+  const resolvedConfig = await prepareConfig(config);
+  const db = createKnexClient(connector.type, resolvedConfig);
+  try {
+    const result = await db.raw(query);
+    const rows = connector.type === 'postgresql' ? result.rows : result[0];
+    return {
+      success: true,
+      rowCount: rows.length,
+      data: rows.slice(0, MAX_PREVIEW_ROWS),
+      truncated: rows.length > MAX_PREVIEW_ROWS,
+    };
+  } finally {
+    await db.destroy();
+  }
 }
 
 function sanitize(doc) {
