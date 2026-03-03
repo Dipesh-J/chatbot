@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { SlackChannelSelectDialog } from '../slack/SlackChannelSelectDialog';
 import { BarChart2, Share2, Loader2, Check } from 'lucide-react';
 import { useDashboard } from '../../context/DashboardContext';
 import { ChartCard } from './ChartCard';
@@ -12,12 +13,17 @@ export function DashboardTab() {
     const dashboardRef = useRef(null);
     const [sharing, setSharing] = useState(false);
     const [shared, setShared] = useState(false);
+    const [showSlackDialog, setShowSlackDialog] = useState(false);
 
     const kpiCards = charts.filter((c) => c.type === 'kpi');
     const chartCards = charts.filter((c) => c.type !== 'kpi');
 
-    const handleShareToSlack = async () => {
+    const handleShareClick = () => {
         if (!dashboardRef.current || !activeSessionId) return;
+        setShowSlackDialog(true);
+    };
+
+    const handleConfirmShare = async (channelId) => {
         setSharing(true);
         try {
             const html2canvas = (await import('html2canvas')).default;
@@ -26,8 +32,9 @@ export function DashboardTab() {
                 scale: 2,
             });
             const image = canvas.toDataURL('image/png');
-            await shareDashboardToSlack(activeSessionId, image);
+            await shareDashboardToSlack(activeSessionId, image, channelId);
             setShared(true);
+            setShowSlackDialog(false);
             setTimeout(() => setShared(false), 3000);
         } catch (err) {
             console.error('Failed to share dashboard:', err);
@@ -73,7 +80,7 @@ export function DashboardTab() {
                                         </span>
                                     </div>
                                     <button
-                                        onClick={handleShareToSlack}
+                                        onClick={handleShareClick}
                                         disabled={sharing}
                                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-zinc-800 border border-border hover:bg-zinc-700 text-foreground transition-all disabled:opacity-50"
                                     >
@@ -110,6 +117,13 @@ export function DashboardTab() {
                     )}
                 </div>
             </ScrollArea>
+
+            <SlackChannelSelectDialog
+                open={showSlackDialog}
+                onOpenChange={setShowSlackDialog}
+                onConfirm={handleConfirmShare}
+                isSharing={sharing}
+            />
         </div>
     );
 }

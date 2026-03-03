@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SlackChannelSelectDialog } from '../slack/SlackChannelSelectDialog';
 import { FileText, Trash2, Slack, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -15,6 +16,8 @@ export function ReportsPanel() {
     const [selectedReport, setSelectedReport] = useState(null);
     const [loadingReport, setLoadingReport] = useState(false);
     const [sharing, setSharing] = useState(false);
+    const [showSlackDialog, setShowSlackDialog] = useState(false);
+    const [reportToShare, setReportToShare] = useState(null);
 
     useEffect(() => {
         setLoading(true);
@@ -33,16 +36,30 @@ export function ReportsPanel() {
         finally { setLoadingReport(false); }
     };
 
-    const handleShare = async () => {
-        if (!selectedReport) return;
+    const handleShareClick = (report) => {
+        setReportToShare(report);
+        setShowSlackDialog(true);
+    };
+
+    const handleConfirmShare = async (channelId) => {
+        if (!reportToShare) return;
         setSharing(true);
         try {
-            await shareToSlack(selectedReport._id);
+            await shareToSlack(reportToShare._id, { channel: channelId });
             toast.success('Report shared to Slack!');
-            setSelectedReport((r) => r ? { ...r, sharedToSlack: true } : r);
+
+            // Update the shared status in both lists
+            setReports((prev) => prev.map(r => r._id === reportToShare._id ? { ...r, sharedToSlack: true } : r));
+            if (selectedReport?._id === reportToShare._id) {
+                setSelectedReport((r) => r ? { ...r, sharedToSlack: true } : r);
+            }
+            setShowSlackDialog(false);
         } catch (err) {
             toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to share to Slack');
-        } finally { setSharing(false); }
+        } finally {
+            setSharing(false);
+            setReportToShare(null);
+        }
     };
 
     const handleDelete = async (reportId) => {
@@ -215,7 +232,7 @@ export function ReportsPanel() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={handleShare}
+                                onClick={() => handleShareClick(selectedReport)}
                                 disabled={sharing || selectedReport.sharedToSlack}
                                 className="gap-2"
                             >
@@ -226,6 +243,13 @@ export function ReportsPanel() {
                     </div>
                 </div>
             )}
+
+            <SlackChannelSelectDialog
+                open={showSlackDialog}
+                onOpenChange={setShowSlackDialog}
+                onConfirm={handleConfirmShare}
+                isSharing={sharing}
+            />
         </div>
     );
 }

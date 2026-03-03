@@ -42,8 +42,9 @@ export async function shareToSlack(req, res, next) {
 
     // Try Composio first
     if (isComposioConfigured()) {
+      const { channel } = req.body;
       const composioResult = await sendSlackMessage({
-        channel: user?.slackConfig?.channel || '#general',
+        channel: channel || user?.slackConfig?.channel || '#general',
         text,
         entityId: req.user._id.toString(),
       });

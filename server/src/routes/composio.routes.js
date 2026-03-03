@@ -5,6 +5,7 @@ import {
   hasSlackConnection,
   isComposioConfigured,
   disconnectSlack,
+  getSlackChannels,
 } from '../services/composio.service.js';
 
 const router = Router();
@@ -19,6 +20,21 @@ router.get('/status', auth, async (req, res) => {
   }
 
   res.json({ composioConfigured: configured, slackConnected });
+});
+
+// Get available Slack channels
+router.get('/slack/channels', auth, async (req, res) => {
+  if (!isComposioConfigured()) {
+    return res.status(400).json({ error: 'Composio not configured' });
+  }
+
+  try {
+    const channels = await getSlackChannels(req.user._id.toString());
+    res.json({ channels });
+  } catch (error) {
+    console.error('Slack channels route error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch Slack channels' });
+  }
 });
 
 // Initiate Composio Slack OAuth connection

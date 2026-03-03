@@ -24,8 +24,8 @@ export async function sendSlackMessage({ channel, text, entityId }) {
 
     if (!connection) return null;
 
-    const result = await client.executeAction({
-      action: 'SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL',
+    const result = await entity.execute({
+      actionName: 'SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL',
       params: {
         channel: channel || '#general',
         text,
@@ -35,8 +35,45 @@ export async function sendSlackMessage({ channel, text, entityId }) {
 
     return result;
   } catch (error) {
-    console.error('Composio Slack error:', error.message);
+    console.error('Composio Slack error:', error.message || error);
     return null;
+  }
+}
+
+/**
+ * Get available Slack channels for the user
+ */
+export async function getSlackChannels(entityId) {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const entity = client.getEntity(entityId || 'default');
+    const connection = await entity.getConnection({ app: 'slack' });
+
+    if (!connection) return [];
+
+    const result = await entity.execute({
+      actionName: 'SLACK_LIST_CONVERSATIONS',
+      params: {
+        types: 'public_channel,private_channel',
+        limit: 100
+      },
+      connectedAccountId: connection.id
+    });
+
+    if (result && result.data && result.data.channels) {
+      return result.data.channels.map(c => ({
+        id: c.id,
+        name: c.name,
+        is_private: c.is_private
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Composio get channels error:', error.message || error);
+    return [];
   }
 }
 
@@ -86,11 +123,24 @@ export async function disconnectSlack(entityId) {
 
   try {
     const entity = client.getEntity(entityId);
-    const connection = await entity.getConnection({ app: 'slack' });
+    let connection;
+
+    try {
+      connection = await entity.getConnection({ app: 'slack' });
+    } catch (err) {
+      // SDK throws if connection doesn't exist
+      return true;
+    }
+
     if (!connection) return true; // Already disconnected
 
     // The SDK's delete method is on connectedAccounts, not on the connection object itself
-    await client.connectedAccounts.delete({ connectedAccountId: connection.id });
+    try {
+      await client.connectedAccounts.delete({ connectedAccountId: connection.id });
+    } catch (err) {
+      console.warn('Composio delete warning (might already be deleted):', err.message);
+    }
+
     return true;
   } catch (error) {
     console.error('Composio disconnect error:', error.message);
