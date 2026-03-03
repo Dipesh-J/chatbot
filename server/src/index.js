@@ -34,6 +34,9 @@ const io = new Server(httpServer, {
 
 initSocket(io);
 
+// Trust reverse proxy (Render, Railway, etc.) so req.protocol is 'https'
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
