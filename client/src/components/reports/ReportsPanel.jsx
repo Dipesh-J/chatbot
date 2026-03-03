@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { SlackChannelSelectDialog } from '../slack/SlackChannelSelectDialog';
+import { SlackShareDialog } from '../slack/SlackShareDialog';
 import { FileText, Trash2, Slack, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -41,18 +41,15 @@ export function ReportsPanel() {
         setShowSlackDialog(true);
     };
 
-    const handleConfirmShare = async (channelId) => {
+    const handleConfirmShare = async ({ type, target }) => {
         if (!reportToShare) return;
         setSharing(true);
         try {
-            await shareToSlack(reportToShare._id, { channel: channelId });
+            const payload = type === 'dm' ? { userId: target } : { channel: target };
+            await shareToSlack(reportToShare._id, payload);
             toast.success('Report shared to Slack!');
 
-            // Update the shared status in both lists
-            setReports((prev) => prev.map(r => r._id === reportToShare._id ? { ...r, sharedToSlack: true } : r));
-            if (selectedReport?._id === reportToShare._id) {
-                setSelectedReport((r) => r ? { ...r, sharedToSlack: true } : r);
-            }
+            // No state lock — allow sharing again
             setShowSlackDialog(false);
         } catch (err) {
             toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to share to Slack');
@@ -138,12 +135,7 @@ export function ReportsPanel() {
                             <span>{formatDate(selectedReport.createdAt)}</span>
                             <span>·</span>
                             <Badge variant={TYPE_COLORS[selectedReport.type] || 'secondary'} className="capitalize">{selectedReport.type}</Badge>
-                            {selectedReport.sharedToSlack && (
-                                <>
-                                    <span>·</span>
-                                    <span className="flex items-center gap-1 text-purple-400"><Slack className="w-3 h-3" /> Shared</span>
-                                </>
-                            )}
+
                         </div>
                     </div>
                     <ScrollArea className="flex-1 px-6">
@@ -233,22 +225,23 @@ export function ReportsPanel() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleShareClick(selectedReport)}
-                                disabled={sharing || selectedReport.sharedToSlack}
+                                disabled={sharing}
                                 className="gap-2"
                             >
                                 <Slack className="w-4 h-4" />
-                                {selectedReport.sharedToSlack ? 'Shared' : sharing ? 'Sharing...' : 'Share to Slack'}
+                                {sharing ? 'Sharing...' : 'Share to Slack'}
                             </Button>
                         </div>
                     </div>
                 </div>
             )}
 
-            <SlackChannelSelectDialog
+            <SlackShareDialog
                 open={showSlackDialog}
                 onOpenChange={setShowSlackDialog}
                 onConfirm={handleConfirmShare}
                 isSharing={sharing}
+                title="Share Report to Slack"
             />
         </div>
     );

@@ -6,6 +6,8 @@ import {
   isComposioConfigured,
   disconnectSlack,
   getSlackChannels,
+  getSlackUsers,
+  getSlackDMs,
 } from '../services/composio.service.js';
 
 const router = Router();
@@ -65,6 +67,36 @@ router.delete('/slack', auth, async (req, res) => {
     res.status(500).json({
       error: error.message || 'Failed to disconnect Slack. Please try again.',
     });
+  }
+});
+
+// Get available Slack users
+router.get('/slack/users', auth, async (req, res) => {
+  if (!isComposioConfigured()) {
+    return res.status(400).json({ error: 'Composio not configured' });
+  }
+
+  try {
+    const users = await getSlackUsers(req.user._id.toString());
+    res.json({ users });
+  } catch (error) {
+    console.error('Slack users route error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch Slack users' });
+  }
+});
+
+// Get existing DM conversations
+router.get('/slack/dms', auth, async (req, res) => {
+  if (!isComposioConfigured()) {
+    return res.status(400).json({ error: 'Composio not configured' });
+  }
+
+  try {
+    const dms = await getSlackDMs(req.user._id.toString());
+    res.json({ dms });
+  } catch (error) {
+    console.error('Slack DMs route error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch Slack DMs' });
   }
 });
 

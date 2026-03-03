@@ -41,7 +41,6 @@ export function ReportsDrawer({ open, onClose }) {
         try {
             await shareToSlack(selectedReport._id);
             toast.success('Report shared to Slack!');
-            setSelectedReport((r) => r ? { ...r, sharedToSlack: true } : r);
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to share to Slack');
         } finally { setSharing(false); }
@@ -122,12 +121,7 @@ export function ReportsDrawer({ open, onClose }) {
                             <span>{formatDate(selectedReport.createdAt)}</span>
                             <span>·</span>
                             <Badge variant={TYPE_COLORS[selectedReport.type] || 'secondary'} className="capitalize">{selectedReport.type}</Badge>
-                            {selectedReport.sharedToSlack && (
-                                <>
-                                    <span>·</span>
-                                    <span className="flex items-center gap-1 text-purple-400"><Slack className="w-3 h-3" /> Shared</span>
-                                </>
-                            )}
+
                         </div>
                         <ScrollArea className="flex-1 border border-border rounded-xl px-5 py-4">
                             {loadingReport ? (
@@ -143,11 +137,11 @@ export function ReportsDrawer({ open, onClose }) {
                                 variant="outline"
                                 size="sm"
                                 onClick={handleShare}
-                                disabled={sharing || selectedReport.sharedToSlack}
+                                disabled={sharing}
                                 className="gap-2"
                             >
                                 <Slack className="w-4 h-4" />
-                                {selectedReport.sharedToSlack ? 'Shared' : sharing ? 'Sharing...' : 'Share to Slack'}
+                                {sharing ? 'Sharing...' : 'Share to Slack'}
                             </Button>
                         </div>
                     </>

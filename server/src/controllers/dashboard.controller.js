@@ -19,7 +19,7 @@ export async function shareSlack(req, res, next) {
       req.params.id,
       image,
       channel,
-      req.user._id.toString()   // ← pass userId as entityId for Composio
+      req.user._id.toString()
     );
     res.json(result);
   } catch (error) {

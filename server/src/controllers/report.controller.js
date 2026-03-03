@@ -1,7 +1,8 @@
 import Report from '../models/Report.js';
 import User from '../models/User.js';
 import axios from 'axios';
-import { sendSlackMessage, isComposioConfigured } from '../services/composio.service.js';
+import { sendSlackMessage, sendSlackDM, isComposioConfigured } from '../services/composio.service.js';
+import { markdownToSlackBlocks } from '../utils/slack-blocks.js';
 
 export async function getReports(req, res, next) {
   try {
@@ -38,16 +39,32 @@ export async function shareToSlack(req, res, next) {
     if (!report) return res.status(404).json({ error: 'Report not found' });
 
     const user = await User.findById(req.user._id).lean();
-    const text = `*BizCopilot: ${report.title}*\n\n${report.content.slice(0, 2500)}`;
 
-    // Try Composio first
+    // Build rich Block Kit payload from the markdown content
+    const { blocks, text } = markdownToSlackBlocks(report.title, report.content);
+
+    const { channel, userId } = req.body;
+    const isDM = !!userId;
+
+    // ── Try Composio first (user's personal OAuth connection) ───────────────
     if (isComposioConfigured()) {
-      const { channel } = req.body;
-      const composioResult = await sendSlackMessage({
-        channel: channel || user?.slackConfig?.channel || '#general',
-        text,
-        entityId: req.user._id.toString(),
-      });
+      let composioResult;
+
+      if (isDM) {
+        // DMs don't support blocks via the simple send action — send plain mrkdwn
+        composioResult = await sendSlackDM({
+          entityId: req.user._id.toString(),
+          userId,
+          text,
+        });
+      } else {
+        composioResult = await sendSlackMessage({
+          channel: channel || user?.slackConfig?.channel || '#general',
+          text,
+          blocks,
+          entityId: req.user._id.toString(),
+        });
+      }
 
       if (composioResult) {
         report.sharedToSlack = true;
@@ -56,25 +73,26 @@ export async function shareToSlack(req, res, next) {
       }
     }
 
-    // Fall back to webhook
-    const webhookUrl = user?.slackConfig?.webhookUrl;
-    if (!webhookUrl) {
-      return res.status(400).json({
-        error: 'Slack not connected. Go to Settings → Integrations and click "Connect Slack" to authorize your Slack workspace.',
-      });
+    // ── Fall back to webhook (channel only, not DMs) ─────────────────────────
+    if (!isDM) {
+      const webhookUrl = user?.slackConfig?.webhookUrl;
+      if (!webhookUrl) {
+        return res.status(400).json({
+          error: 'Slack not connected. Go to Settings → Integrations and click "Connect Slack" to authorize your Slack workspace.',
+        });
+      }
+
+      await axios.post(webhookUrl, { text, blocks });
+
+      report.sharedToSlack = true;
+      await report.save();
+
+      return res.json({ message: 'Report shared to Slack' });
     }
 
-    await axios.post(webhookUrl, {
-      blocks: [
-        { type: 'header', text: { type: 'plain_text', text: `BizCopilot: ${report.title}` } },
-        { type: 'section', text: { type: 'mrkdwn', text: report.content.slice(0, 2500) } },
-      ],
+    return res.status(400).json({
+      error: 'Failed to share to Slack. Please ensure Slack is connected via Settings.',
     });
-
-    report.sharedToSlack = true;
-    await report.save();
-
-    res.json({ message: 'Report shared to Slack' });
   } catch (error) {
     next(error);
   }

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import { SlackChannelSelectDialog } from '../slack/SlackChannelSelectDialog';
-import { BarChart2, Share2, Loader2, Check } from 'lucide-react';
+import { SlackShareDialog } from '../slack/SlackShareDialog';
+import { BarChart2, Share2, Loader2 } from 'lucide-react';
 import { useDashboard } from '../../context/DashboardContext';
 import { ChartCard } from './ChartCard';
 import { KpiCard } from './KpiCard';
@@ -12,7 +12,6 @@ export function DashboardTab() {
     const { charts, activeSessionId } = useDashboard();
     const dashboardRef = useRef(null);
     const [sharing, setSharing] = useState(false);
-    const [shared, setShared] = useState(false);
     const [showSlackDialog, setShowSlackDialog] = useState(false);
 
     const kpiCards = charts.filter((c) => c.type === 'kpi');
@@ -23,7 +22,7 @@ export function DashboardTab() {
         setShowSlackDialog(true);
     };
 
-    const handleConfirmShare = async (channelId) => {
+    const handleConfirmShare = async ({ type, target }) => {
         setSharing(true);
         try {
             const html2canvas = (await import('html2canvas')).default;
@@ -32,10 +31,14 @@ export function DashboardTab() {
                 scale: 2,
             });
             const image = canvas.toDataURL('image/png');
-            await shareDashboardToSlack(activeSessionId, image, channelId);
-            setShared(true);
+            
+            if (type === 'dm') {
+                await shareDashboardToSlack(activeSessionId, image, null, target);
+            } else {
+                await shareDashboardToSlack(activeSessionId, image, target, null);
+            }
             setShowSlackDialog(false);
-            setTimeout(() => setShared(false), 3000);
+            toast.success('Dashboard shared to Slack!');
         } catch (err) {
             console.error('Failed to share dashboard:', err);
             toast.error(err.response?.data?.error || err.message || 'Failed to share dashboard to Slack');
@@ -86,12 +89,10 @@ export function DashboardTab() {
                                     >
                                         {sharing ? (
                                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        ) : shared ? (
-                                            <Check className="w-3.5 h-3.5 text-emerald-400" />
                                         ) : (
                                             <Share2 className="w-3.5 h-3.5" />
                                         )}
-                                        {sharing ? 'Sharing...' : shared ? 'Shared!' : 'Share to Slack'}
+                                        {sharing ? 'Sharing...' : 'Share to Slack'}
                                     </button>
                                 </div>
                             )}
@@ -118,7 +119,7 @@ export function DashboardTab() {
                 </div>
             </ScrollArea>
 
-            <SlackChannelSelectDialog
+            <SlackShareDialog
                 open={showSlackDialog}
                 onOpenChange={setShowSlackDialog}
                 onConfirm={handleConfirmShare}

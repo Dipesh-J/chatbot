@@ -4,6 +4,7 @@ import axios from 'axios';
 import Report from '../../models/Report.js';
 import User from '../../models/User.js';
 import { sendSlackMessage, isComposioConfigured } from '../../services/composio.service.js';
+import { markdownToSlackBlocks } from '../../utils/slack-blocks.js';
 
 const shareToSlack = tool(
   async ({ reportId, message, channel }, config) => {
@@ -13,12 +14,14 @@ const shareToSlack = tool(
     const user = await User.findById(userId).lean();
 
     let text = message || '';
+    let blocks;
 
     if (reportId) {
       const report = await Report.findOne({ _id: reportId, userId }).lean();
       if (!report) return 'Report not found.';
 
-      text = `*${report.title}*\n\n${report.content.slice(0, 2500)}`;
+      // Build rich Block Kit payload
+      ({ blocks, text } = markdownToSlackBlocks(report.title, report.content));
       await Report.findByIdAndUpdate(reportId, { sharedToSlack: true });
     }
 
@@ -29,6 +32,7 @@ const shareToSlack = tool(
       const composioResult = await sendSlackMessage({
         channel: channel || user?.slackConfig?.channel || '#general',
         text,
+        blocks,
         entityId: userId,
       });
 
@@ -49,16 +53,10 @@ const shareToSlack = tool(
 
     try {
       await axios.post(webhookUrl, {
-        blocks: [
-          {
-            type: 'header',
-            text: { type: 'plain_text', text: 'BizCopilot Report' },
-          },
-          {
-            type: 'section',
-            text: { type: 'mrkdwn', text },
-          },
-        ],
+        text, blocks: blocks || [
+          { type: 'header', text: { type: 'plain_text', text: 'BizCopilot Report' } },
+          { type: 'section', text: { type: 'mrkdwn', text } },
+        ]
       });
 
       return JSON.stringify({

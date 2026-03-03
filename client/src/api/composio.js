@@ -8,3 +8,7 @@ export const disconnectSlack = () => api.delete('/composio/slack');
 
 export const getSlackChannels = () => api.get('/composio/slack/channels');
 
+export const getSlackUsers = () => api.get('/composio/slack/users');
+
+export const getSlackDMs = () => api.get('/composio/slack/dms');
+
