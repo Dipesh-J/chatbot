@@ -1,12 +1,14 @@
 # BizCopilot 🚀
 *AI-Powered Business Intelligence Copilot*
 
+**[🌍 Live Demo: https://chatbot-6bn3.onrender.com/](https://chatbot-6bn3.onrender.com/)**
+
 BizCopilot is an intelligent, unified dashboard and conversational AI agent designed to help users synthesize, analyze, and communicate financial datasets quickly. It bridges the gap between raw data analysis, smart visualizations, and easy team sharing.
 
 ---
 
 ## 🌟 Video Walkthrough
-*[Insert Loom Video Walkthrough URL Here]*
+**[Watch the Loom Video Walkthrough](https://www.loom.com/share/8c2e1e48a439445a8c9303b25e202b6a)**
 
 ## ✨ Key Features
 
@@ -71,22 +73,3 @@ Client: http://localhost:5173
 Server: http://localhost:5001
 
 ---
-
-## 🌍 Deployment Strategy
-
-BizCopilot utilizes **Socket.IO** to push live widget updates out from the LangGraph agent back to the user's dashboard seamlessly.  
-Because of real-time web socket persistence, **Serverless platforms like Vercel are not recommended for the backend**.  
-
-### Recommended Approach: Monolithic on Render / Railway
-This project already contains monolithic routing (the server serves the built Vite React app in production via `express.static`).
-
-1. **Build the Client:**
-   ```bash
-   npm run build
-   ```
-2. **Start the Express Setup:**
-   ```bash
-   npm run start
-   ```
-3. **Platform Setup:**
-   Connect your GitHub repo to **Render**, set the build command to `npm run install:all && npm run build`, and the start command to `npm run start`. Add your `.env` variables and you are live!
