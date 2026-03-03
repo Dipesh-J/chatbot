@@ -4,8 +4,10 @@ import { MessageList } from '../components/chat/MessageList';
 import { ChatInput } from '../components/chat/ChatInput';
 import { ReportsPanel } from '../components/reports/ReportsPanel';
 import { DashboardTab } from '../components/dashboard/DashboardTab';
+import { ConnectorsPanel } from '../components/connectors/ConnectorsPanel';
 import { useChat } from '../hooks/useChat';
 import { useCSVUpload } from '../hooks/useCSVUpload';
+import { useConnectors } from '../hooks/useConnectors';
 import { Loader2 } from 'lucide-react';
 
 export function ChatPage() {
@@ -13,6 +15,8 @@ export function ChatPage() {
     const csvState = useCSVUpload();
     const [csvOpen, setCsvOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('chat');
+
+    const { connectors, mcpTools, actions } = useConnectors();
 
     const {
         sessions,
@@ -43,6 +47,7 @@ export function ChatPage() {
 
     const handleSend = (content, outputMode) => sendMessage(content, outputMode);
     const handleSuggestion = (s) => sendMessage(s);
+    const handleConnectorsClick = () => setActiveTab('connectors');
 
     if (!activeSession && sessions.length === 0) {
         return (
@@ -58,6 +63,7 @@ export function ChatPage() {
             csvProps={{ ...csvState, csvOpen, setCsvOpen }}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            onConnectorsClick={handleConnectorsClick}
         >
             {/* Tab content with slide transition */}
             <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden relative">
@@ -79,6 +85,7 @@ export function ChatPage() {
                         onUploadClick={() => setCsvOpen(true)}
                         onFileUpload={csvState.upload}
                         sessionId={activeSession?._id}
+                        mcpTools={mcpTools}
                     />
                 </div>
 
@@ -96,6 +103,20 @@ export function ChatPage() {
                     style={{ transform: activeTab === 'dashboard' ? 'translateX(0)' : 'translateX(100%)' }}
                 >
                     {activeTab === 'dashboard' && <DashboardTab />}
+                </div>
+
+                {/* Connectors panel — slides in from the right */}
+                <div
+                    className="absolute inset-0 flex flex-col transition-transform duration-300 ease-in-out"
+                    style={{ transform: activeTab === 'connectors' ? 'translateX(0)' : 'translateX(100%)' }}
+                >
+                    {activeTab === 'connectors' && (
+                        <ConnectorsPanel
+                            connectors={connectors}
+                            mcpTools={mcpTools}
+                            actions={actions}
+                        />
+                    )}
                 </div>
             </div>
         </AppLayout>

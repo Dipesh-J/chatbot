@@ -9,8 +9,11 @@ import createVisualization from './tools/visualization.js';
 import generateStrategy from './tools/strategy.js';
 import generateReport from './tools/reportGenerator.js';
 import shareToSlack from './tools/slackIntegration.js';
+import McpTool from '../models/McpTool.js';
+import Connector from '../models/Connector.js';
+import { buildDynamicTool } from './tools/dynamicMcpTool.js';
 
-const tools = [financialAnalysis, createVisualization, generateStrategy, generateReport, shareToSlack];
+const staticTools = [financialAnalysis, createVisualization, generateStrategy, generateReport, shareToSlack];
 
 const llm = new ChatGoogleGenerativeAI({
   model: 'gemini-2.5-flash',
@@ -19,13 +22,33 @@ const llm = new ChatGoogleGenerativeAI({
   maxOutputTokens: 4096,
 });
 
-const agent = createReactAgent({
-  llm,
-  tools,
-});
+async function buildToolsForUser(userId) {
+  const enabledTools = await McpTool.find({ userId, enabled: true }).lean();
+  if (enabledTools.length === 0) return staticTools;
 
-export async function runAgent({ userMessage, user, dataSources, sessionId }) {
-  const systemPrompt = buildSystemPrompt(user, dataSources);
+  const connectorIds = [...new Set(enabledTools.map((t) => t.connectorId.toString()))];
+  const connectors = await Connector.find({
+    _id: { $in: connectorIds },
+    status: 'connected',
+  }).lean();
+
+  const connectorMap = {};
+  for (const c of connectors) {
+    connectorMap[c._id.toString()] = c;
+  }
+
+  const dynamicTools = [];
+  for (const mcpTool of enabledTools) {
+    const connector = connectorMap[mcpTool.connectorId.toString()];
+    if (!connector) continue;
+    dynamicTools.push(buildDynamicTool(mcpTool, connector));
+  }
+
+  return [...staticTools, ...dynamicTools];
+}
+
+export async function runAgent({ userMessage, user, dataSources, sessionId, mcpTools = [] }) {
+  const systemPrompt = buildSystemPrompt(user, dataSources, mcpTools);
   const history = await getSessionHistory(sessionId);
 
   const messages = [
@@ -35,6 +58,9 @@ export async function runAgent({ userMessage, user, dataSources, sessionId }) {
     ),
     new HumanMessage(userMessage),
   ];
+
+  const tools = await buildToolsForUser(user._id);
+  const agent = createReactAgent({ llm, tools });
 
   let result;
   try {
@@ -91,8 +117,8 @@ export async function runAgent({ userMessage, user, dataSources, sessionId }) {
   };
 }
 
-export async function streamAgent({ userMessage, user, dataSources, sessionId, onToken, onToolCall }) {
-  const systemPrompt = buildSystemPrompt(user, dataSources);
+export async function streamAgent({ userMessage, user, dataSources, sessionId, onToken, onToolCall, mcpTools = [] }) {
+  const systemPrompt = buildSystemPrompt(user, dataSources, mcpTools);
   const history = await getSessionHistory(sessionId);
 
   const messages = [
@@ -102,6 +128,9 @@ export async function streamAgent({ userMessage, user, dataSources, sessionId, o
     ),
     new HumanMessage(userMessage),
   ];
+
+  const tools = await buildToolsForUser(user._id);
+  const agent = createReactAgent({ llm, tools });
 
   let stream;
   try {

@@ -2,7 +2,7 @@ import { Sidebar } from './Sidebar';
 import { ContentTabs } from './ContentTabs';
 import { UploadModal } from '../csv/UploadModal';
 
-export function AppLayout({ children, chatProps, csvProps, activeTab, onTabChange }) {
+export function AppLayout({ children, chatProps, csvProps, activeTab, onTabChange, onConnectorsClick }) {
     const { sessions, activeSession, startNewSession, selectSession, removeSession } = chatProps;
     const { csvOpen, setCsvOpen } = csvProps;
 
@@ -18,6 +18,8 @@ export function AppLayout({ children, chatProps, csvProps, activeTab, onTabChang
                         onTabChange('chat');
                     }}
                     onDeleteSession={removeSession}
+                    onConnectorsClick={onConnectorsClick}
+                    activeTab={activeTab}
                 />
                 <div className="flex-1 flex flex-col min-w-0 min-h-0">
                     <ContentTabs activeTab={activeTab} onTabChange={onTabChange} />

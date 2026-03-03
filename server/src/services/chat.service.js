@@ -1,6 +1,7 @@
 import ChatSession from '../models/ChatSession.js';
 import Message from '../models/Message.js';
 import FinancialData from '../models/FinancialData.js';
+import McpTool from '../models/McpTool.js';
 import { streamAgent } from '../agent/index.js';
 import { addChartToSession } from './dashboard.service.js';
 
@@ -40,6 +41,9 @@ export async function sendMessage({ sessionId, userId, content, user, res }) {
     await session.save();
   }
 
+  // Load enabled MCP tools for prompt context
+  const mcpTools = await McpTool.find({ userId, enabled: true }).select('name description').lean();
+
   // Set up SSE headers
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -55,6 +59,7 @@ export async function sendMessage({ sessionId, userId, content, user, res }) {
       user,
       dataSources,
       sessionId,
+      mcpTools,
       onToken: (token) => {
         res.write(`data: ${JSON.stringify({ type: 'token', content: token })}\n\n`);
       },

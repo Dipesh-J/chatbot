@@ -1,4 +1,4 @@
-import { MessageSquarePlus, Trash2, MessageSquare, MoreHorizontal, LogOut, Settings } from 'lucide-react';
+import { MessageSquarePlus, Trash2, MessageSquare, MoreHorizontal, LogOut, Settings, Cable } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -13,7 +13,7 @@ import {
 import { cn, truncate, formatDate, getInitials } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 
-export function Sidebar({ sessions, activeSession, onNewChat, onSelectSession, onDeleteSession }) {
+export function Sidebar({ sessions, activeSession, onNewChat, onSelectSession, onDeleteSession, onConnectorsClick, activeTab }) {
     const { user, logout } = useAuth();
 
     return (
@@ -30,8 +30,26 @@ export function Sidebar({ sessions, activeSession, onNewChat, onSelectSession, o
                 </Button>
             </div>
 
+            {/* Connectors button */}
+            <div className="px-3 pb-2">
+                <Button
+                    onClick={onConnectorsClick}
+                    className={cn(
+                        'w-full gap-2 transition-all',
+                        activeTab === 'connectors'
+                            ? 'bg-accent text-foreground'
+                            : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+                    )}
+                    variant="ghost"
+                >
+                    <Cable className="w-4 h-4" />
+                    Connectors
+                </Button>
+            </div>
+
             {/* Session list */}
             <ScrollArea className="flex-1 px-2">
+                <p className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider px-3 pb-2">Recent Chats</p>
                 {sessions.length === 0 ? (
                     <div className="px-3 py-8 text-center">
                         <MessageSquare className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />

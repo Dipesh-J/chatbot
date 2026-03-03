@@ -16,6 +16,8 @@ const env = {
   SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
   COMPOSIO_API_KEY: process.env.COMPOSIO_API_KEY,
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
+  SERVER_URL: process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`,
+  CONNECTOR_ENCRYPTION_KEY: process.env.CONNECTOR_ENCRYPTION_KEY,
 };
 
 export default env;

@@ -24,6 +24,24 @@ function CopyButton({ text }) {
     );
 }
 
+function renderWithMentions(content) {
+    const parts = content.split(/(@\[[^\]]+\])/g);
+    return parts.map((part, i) => {
+        const match = part.match(/^@\[([^\]]+)\]$/);
+        if (match) {
+            return (
+                <span
+                    key={i}
+                    className="inline-flex items-center bg-primary/20 text-primary rounded px-1.5 py-0.5 text-xs font-medium mx-0.5"
+                >
+                    @{match[1]}
+                </span>
+            );
+        }
+        return part;
+    });
+}
+
 export function MessageBubble({ message }) {
     const isUser = message.role === 'user';
     const isStreaming = message.isStreaming;
@@ -33,7 +51,7 @@ export function MessageBubble({ message }) {
             <div className="flex justify-end mb-4 animate-fade-in-up">
                 <div className="max-w-[75%] flex items-end gap-2">
                     <div className="bg-primary/15 border border-primary/20 text-foreground rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed">
-                        {message.content}
+                        {renderWithMentions(message.content)}
                     </div>
                     <div className="w-7 h-7 rounded-full bg-zinc-800 border border-border flex items-center justify-center shrink-0 mb-0.5">
                         <User className="w-3.5 h-3.5 text-muted-foreground" />

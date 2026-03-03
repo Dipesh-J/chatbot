@@ -1,6 +1,9 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Send, Paperclip, Square, ChevronDown, FileUp, BarChart2, FileText, X, CheckCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useMentions } from '../../hooks/useMentions';
+import { MentionDropdown } from './MentionDropdown';
+import { MentionHighlighter } from './MentionHighlighter';
 
 const MODELS = [
     { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
@@ -14,7 +17,7 @@ const REPORT_PROMPT =
 const DASHBOARD_PROMPT =
     'Generate an interactive dashboard with charts and visualizations based on the uploaded data.';
 
-export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick, onFileUpload, sessionId }) {
+export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick, onFileUpload, sessionId, mcpTools = [] }) {
     const [value, setValue] = useState('');
     const [selectedModel, setSelectedModel] = useState(MODELS[0]);
     const [modelOpen, setModelOpen] = useState(false);
@@ -23,6 +26,7 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick, onF
     const [attachedFiles, setAttachedFiles] = useState([]);
     // 'report' | 'dashboard' | null — exclusive toggle
     const [outputMode, setOutputMode] = useState(null);
+    const mentions = useMentions(mcpTools);
     const textareaRef = useRef(null);
     const fileInputRef = useRef(null);
     const modelRef = useRef(null);
@@ -59,6 +63,20 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick, onF
     }, [value, attachedFiles, isStreaming, onSend, outputMode]);
 
     const handleKeyDown = (e) => {
+        const mentionResult = mentions.handleKeyDown(e);
+        if (mentionResult) {
+            // If Enter/Tab was pressed to select a tool from the dropdown
+            if (mentionResult.selectIndex !== undefined) {
+                const tool = mentions.filteredTools[mentionResult.selectIndex];
+                if (tool) {
+                    const newValue = mentions.selectTool(tool, value);
+                    setValue(newValue);
+                    // Restore focus after state update
+                    setTimeout(() => textareaRef.current?.focus(), 0);
+                }
+            }
+            return;
+        }
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSubmit();
@@ -199,27 +217,49 @@ export function ChatInput({ onSend, isStreaming, hasMessages, onUploadClick, onF
                                 : 'border-border hover:border-zinc-600 focus-within:border-zinc-500'
                     )}
                 >
-                    {/* Textarea */}
-                    <textarea
-                        ref={textareaRef}
-                        value={value}
-                        onChange={(e) => setValue(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={
-                            isDragging
-                                ? 'Drop files to attach...'
-                                : isStreaming
-                                    ? 'BizCopilot is thinking...'
-                                    : outputMode === 'report'
-                                        ? 'Describe the report you want...'
-                                        : outputMode === 'dashboard'
-                                            ? 'Describe the dashboard you want...'
-                                            : 'Ask about your business data...'
-                        }
-                        disabled={isStreaming}
-                        rows={1}
-                        className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 resize-none outline-none leading-relaxed max-h-[200px] disabled:opacity-50 mb-2"
-                    />
+                    {/* Textarea with mention overlay */}
+                    <div className="relative">
+                        <textarea
+                            ref={textareaRef}
+                            value={value}
+                            onChange={(e) => {
+                                setValue(e.target.value);
+                                mentions.handleChange(e.target.value, textareaRef.current);
+                            }}
+                            onKeyDown={handleKeyDown}
+                            placeholder={
+                                isDragging
+                                    ? 'Drop files to attach...'
+                                    : isStreaming
+                                        ? 'BizCopilot is thinking...'
+                                        : outputMode === 'report'
+                                            ? 'Describe the report you want...'
+                                            : outputMode === 'dashboard'
+                                                ? 'Describe the dashboard you want...'
+                                                : 'Ask about your business data...'
+                            }
+                            disabled={isStreaming}
+                            rows={1}
+                            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 resize-none outline-none leading-relaxed max-h-[200px] disabled:opacity-50 mb-2"
+                        />
+                        <MentionHighlighter value={value} textareaRef={textareaRef} />
+
+                        {/* Mention dropdown */}
+                        {mentions.showDropdown && (
+                            <MentionDropdown
+                                tools={mentions.filteredTools}
+                                query={mentions.dropdownQuery}
+                                position={mentions.dropdownPosition}
+                                selectedIndex={mentions.selectedIndex}
+                                onSelect={(tool) => {
+                                    const newValue = mentions.selectTool(tool, value);
+                                    setValue(newValue);
+                                    setTimeout(() => textareaRef.current?.focus(), 0);
+                                }}
+                                onClose={mentions.close}
+                            />
+                        )}
+                    </div>
 
                     {/* Footer: left tools + right send */}
                     <div className="flex items-center justify-between gap-2">

@@ -1,4 +1,4 @@
-export function buildSystemPrompt(user, dataSources) {
+export function buildSystemPrompt(user, dataSources, mcpTools = []) {
   const dataContext =
     dataSources.length > 0
       ? dataSources
@@ -8,6 +8,17 @@ export function buildSystemPrompt(user, dataSources) {
           )
           .join('\n')
       : 'No datasets uploaded yet.';
+
+  let mcpSection = '';
+  if (mcpTools.length > 0) {
+    const toolLines = mcpTools.map((t) => `- **${t.name}**: ${t.description}`).join('\n');
+    mcpSection = `
+
+## Connected Data Sources (MCP Tools)
+These tools query the user's connected databases:
+${toolLines}
+Use these when the user asks about their database data. Prefer these tools over asking the user to upload CSVs when they have connected databases.`;
+  }
 
   return `You are BizCopilot, an AI-powered business intelligence assistant for small-to-medium business owners.
 
@@ -29,7 +40,8 @@ ${dataContext}
 7. Format currency values with $ and commas (e.g., $12,500).
 8. When no data is available, guide the user to upload a CSV first.
 9. You can chain multiple tools in one response when needed (e.g., analyze then visualize).
+10. When the user asks about connected database data, use the appropriate MCP tool.
 
 ## Tone
-Professional but friendly. Think of yourself as a trusted business advisor, not a tech tool. Use simple language appropriate for non-technical business owners aged 35+.`;
+Professional but friendly. Think of yourself as a trusted business advisor, not a tech tool. Use simple language appropriate for non-technical business owners aged 35+.${mcpSection}`;
 }

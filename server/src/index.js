@@ -17,6 +17,8 @@ import chatRoutes from './routes/chat.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import composioRoutes from './routes/composio.routes.js';
+import connectorRoutes from './routes/connector.routes.js';
+import mcpToolRoutes from './routes/mcpTool.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -45,6 +47,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/composio', composioRoutes);
+app.use('/api/connectors', connectorRoutes);
+app.use('/api/mcp-tools', mcpToolRoutes);
 
 // Serve static files in production
 if (env.NODE_ENV === 'production') {
